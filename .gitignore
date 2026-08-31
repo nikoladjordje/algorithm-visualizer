@@ -1,0 +1,18 @@
+# Build output
+backend/target/
+frontend/node_modules/
+frontend/dist/
+
+# Local agent tooling
+.agents/
+skills-lock.json
+STEPS.md
+
+# IDE and OS files
+backend/.classpath
+backend/.project
+backend/.settings/
+.idea/
+.vscode/
+*.iml
+.DS_Store
