@@ -1,0 +1,133 @@
+{
+  "catalog": [
+    {
+      "id": "insertion",
+      "name": "Insertion Sort",
+      "family": "SORTING",
+      "contractVersion": "2.0",
+      "constraints": {
+        "kind": "SORTING",
+        "minimumValues": 1,
+        "maximumValues": 50,
+        "minimumValue": -2147483648,
+        "maximumValue": 2147483647
+      }
+    },
+    {
+      "id": "bfs",
+      "name": "Breadth-First Search",
+      "family": "GRAPH_TRAVERSAL",
+      "contractVersion": "2.0",
+      "constraints": {
+        "kind": "GRAPH_TRAVERSAL",
+        "minimumNodes": 1,
+        "maximumNodes": 12,
+        "maximumEdges": 66,
+        "nodeLabelPattern": "^[A-Za-z0-9_-]{1,16}$",
+        "directed": false,
+        "weighted": false
+      }
+    }
+  ],
+  "requests": {
+    "sorting": {
+      "kind": "SORTING",
+      "values": [2, 1]
+    },
+    "graphTraversal": {
+      "kind": "GRAPH_TRAVERSAL",
+      "nodes": ["A", "B"],
+      "edges": [{"from": "A", "to": "B"}],
+      "startNode": "A"
+    }
+  },
+  "results": {
+    "sorting": {
+      "kind": "SORTING",
+      "values": [1, 2]
+    },
+    "graphTraversal": {
+      "kind": "GRAPH_TRAVERSAL",
+      "traversalOrder": ["A", "B"],
+      "parents": {"B": "A"},
+      "unreachableNodes": [],
+      "visitedNodeCount": 2,
+      "edgeExaminationCount": 2,
+      "maximumQueueSize": 1
+    }
+  },
+  "states": {
+    "sorting": {
+      "kind": "SORTING",
+      "items": [{"id": 0, "value": 2}, {"id": 1, "value": 1}],
+      "sortedRanges": []
+    },
+    "graphTraversal": {
+      "kind": "GRAPH_TRAVERSAL",
+      "nodeStatuses": {"A": "ACTIVE", "B": "DISCOVERED"},
+      "queue": ["B"],
+      "traversalOrder": ["A"],
+      "parents": {"B": "A"},
+      "examinedEdge": {"from": "A", "to": "B"}
+    }
+  },
+  "events": {
+    "sorting": {
+      "sequence": 1,
+      "type": "COMPARE",
+      "pseudocodeLineId": "compare-adjacent",
+      "state": {
+        "kind": "SORTING",
+        "items": [{"id": 0, "value": 2}, {"id": 1, "value": 1}],
+        "sortedRanges": []
+      },
+      "data": {
+        "kind": "COMPARE",
+        "leftIndex": 0,
+        "rightIndex": 1,
+        "result": "GREATER"
+      }
+    },
+    "graphTraversal": {
+      "sequence": 4,
+      "type": "NODE_DISCOVERED",
+      "pseudocodeLineId": "bfs-enqueue-neighbor",
+      "state": {
+        "kind": "GRAPH_TRAVERSAL",
+        "nodeStatuses": {"A": "ACTIVE", "B": "DISCOVERED"},
+        "queue": ["B"],
+        "traversalOrder": ["A"],
+        "parents": {"B": "A"},
+        "examinedEdge": {"from": "A", "to": "B"}
+      },
+      "data": {
+        "kind": "NODE_DISCOVERED",
+        "node": "B",
+        "parent": "A"
+      }
+    }
+  },
+  "problemDetails": {
+    "type": "urn:problem:algorithm-family-mismatch",
+    "title": "Algorithm family mismatch",
+    "status": 400,
+    "detail": "Algorithm insertion requires request kind SORTING",
+    "instance": "/api/v2/algorithms/insertion/trace",
+    "code": "ALGORITHM_FAMILY_MISMATCH",
+    "field": "kind"
+  },
+  "routeLifecycle": {
+    "preservedV1": [
+      "GET /api/v1/algorithms",
+      "POST /api/v1/algorithms/{algorithmId}/trace"
+    ],
+    "removedCompatibility": [
+      "POST /api/algorithms/insertion-sort",
+      "POST /api/v1/algorithms/insertion-sort"
+    ],
+    "v2": [
+      "GET /api/v2/algorithms",
+      "POST /api/v2/algorithms/{algorithmId}/trace"
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "input": [2, 1],
+  "result": [1, 2],
+  "traces": {
+    "insertion": [
+      "SELECT|select-current|2,1|0-0",
+      "READ|read-adjacent|2,1|0-0",
+      "COMPARE|compare-adjacent|2,1|0-0",
+      "SWAP|swap-adjacent|2,1|0-0",
+      "WRITE|write-swapped-values|1,2|",
+      "SELECT|move-left|1,2|",
+      "MARK_SORTED|complete-pass|1,2|0-1"
+    ],
+    "selection": [
+      "SELECT|select-minimum|2,1|",
+      "READ|read-candidate|2,1|",
+      "COMPARE|compare-candidate|2,1|",
+      "MINIMUM_UPDATE|update-minimum|2,1|",
+      "SWAP|place-minimum|2,1|",
+      "WRITE|write-placement|1,2|",
+      "MARK_SORTED|complete-position|1,2|0-0",
+      "SELECT|select-minimum|1,2|0-0",
+      "MARK_SORTED|complete-position|1,2|0-1"
+    ],
+    "bubble": [
+      "PASS_START|begin-pass|2,1|",
+      "READ|read-adjacent|2,1|",
+      "COMPARE|compare-adjacent|2,1|",
+      "SWAP|swap-adjacent|2,1|",
+      "WRITE|write-swap|1,2|",
+      "PASS_COMPLETE|complete-pass|1,2|0-1"
+    ],
+    "merge": [
+      "SPLIT_RANGE|split-range|2,1|",
+      "BEGIN_MERGE|begin-merge|2,1|",
+      "COMPARE|compare-halves|2,1|",
+      "BUFFER_MOVE|move-to-buffer|2,1|",
+      "WRITE|write-merged|1,1|",
+      "BUFFER_MOVE|move-to-buffer|1,1|",
+      "WRITE|write-merged|1,2|",
+      "COMPLETE_MERGE|complete-merge|1,2|0-1"
+    ],
+    "quick": [
+      "PIVOT_SELECT|select-pivot|2,1|",
+      "PARTITION_ACTIVE|scan-partition|2,1|",
+      "COMPARE|compare-pivot|2,1|",
+      "SWAP|swap-partition|2,1|",
+      "WRITE|write-swap|1,2|",
+      "PARTITION_COMPLETE|partition-complete|1,2|0-0",
+      "MARK_SORTED|partition-complete|1,2|0-1"
+    ],
+    "heap": [
+      "BUILD_HEAP|build-heap|2,1|",
+      "HEAPIFY|heapify|2,1|",
+      "COMPARE|compare-child|2,1|",
+      "ROOT_SELECT|select-root|2,1|",
+      "SWAP|swap-heap|2,1|",
+      "WRITE|write-swap|1,2|",
+      "HEAP_SHRINK|shrink-heap|1,2|1-1",
+      "HEAPIFY|heapify|1,2|1-1",
+      "MARK_SORTED|complete-heap|1,2|0-1"
+    ]
+  }
+}
