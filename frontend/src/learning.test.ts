@@ -3,7 +3,8 @@ import { explainEvent } from './learning'
 import type { AlgorithmEvent, ComparisonResult } from './types'
 
 function compare(result: ComparisonResult, values = [3, 2]): AlgorithmEvent {
-  return { sequence: 1, type: 'COMPARE', state: values, data: { indices: [0, 1], operands: values, result }, pseudocodeLineId: 'compare-adjacent', sortedThrough: 0, pass: 1 }
+  const items = values.map((value, id) => ({ id, value }))
+  return { sequence: 1, type: 'COMPARE', state: { kind: 'SORTING', items, sortedRanges: [] }, data: { kind: 'COMPARE', indices: [0, 1], items, result }, pseudocodeLineId: 'compare-adjacent' }
 }
 
 describe('explainEvent', () => {
@@ -14,13 +15,13 @@ describe('explainEvent', () => {
   })
 
   it('explains swaps and completed passes', () => {
-    expect(explainEvent({ sequence: 1, type: 'SWAP', state: [3, 2], data: { indices: [0, 1] }, pseudocodeLineId: 'swap-adjacent', sortedThrough: 0, pass: 1 })).toContain('Swap indices')
-    expect(explainEvent({ sequence: 2, type: 'MARK_SORTED', state: [1, 2, 3], data: { fromIndex: 0, throughIndex: 2 }, pseudocodeLineId: 'complete-pass', sortedThrough: 2, pass: 2 })).toContain('positions 0 through 2')
+    expect(explainEvent({ sequence: 1, type: 'SWAP', state: { kind: 'SORTING', items: [], sortedRanges: [] }, data: { kind: 'SWAP', indices: [0, 1] }, pseudocodeLineId: 'swap-adjacent' })).toContain('Swap indices')
+    expect(explainEvent({ sequence: 2, type: 'MARK_SORTED', state: { kind: 'SORTING', items: [], sortedRanges: [] }, data: { kind: 'MARK_SORTED', fromIndex: 0, throughIndex: 2 }, pseudocodeLineId: 'complete-pass' })).toContain('Positions 0 through 2')
   })
 
   it('explains select, read, and write events', () => {
-    expect(explainEvent({ sequence: 1, type: 'SELECT', state: [2], data: { index: 0, value: 2 }, pseudocodeLineId: 'select-current', sortedThrough: 0, pass: 1 })).toContain('Select 2')
-    expect(explainEvent({ sequence: 2, type: 'READ', state: [2, 1], data: { indices: [0, 1], readValues: [2, 1] }, pseudocodeLineId: 'read-adjacent', sortedThrough: 0, pass: 1 })).toContain('Read 2 and 1')
-    expect(explainEvent({ sequence: 3, type: 'WRITE', state: [1, 2], data: { indices: [0, 1], writtenValues: [1, 2] }, pseudocodeLineId: 'write-swapped-values', sortedThrough: 0, pass: 1 })).toContain('Write 1 and 2')
+    expect(explainEvent({ sequence: 1, type: 'SELECT', state: { kind: 'SORTING', items: [], sortedRanges: [] }, data: { kind: 'SELECT', index: 0, item: { id: 0, value: 2 } }, pseudocodeLineId: 'select-current' })).toContain('Select 2')
+    expect(explainEvent({ sequence: 2, type: 'READ', state: { kind: 'SORTING', items: [], sortedRanges: [] }, data: { kind: 'READ', indices: [0, 1], items: [{ id: 0, value: 2 }, { id: 1, value: 1 }] }, pseudocodeLineId: 'read-adjacent' })).toContain('Read 2 and 1')
+    expect(explainEvent({ sequence: 3, type: 'WRITE', state: { kind: 'SORTING', items: [], sortedRanges: [] }, data: { kind: 'WRITE', indices: [0, 1], items: [{ id: 1, value: 1 }, { id: 0, value: 2 }] }, pseudocodeLineId: 'write-swapped-values' })).toContain('Write 1 and 2')
   })
 })

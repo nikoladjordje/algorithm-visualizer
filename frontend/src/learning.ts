@@ -28,11 +28,11 @@ export const PRESETS = [
 export function explainEvent(event: AlgorithmEvent): string {
   switch (event.type) {
     case 'SELECT':
-      return `Select ${event.data.value} at index ${event.data.index} as the value being inserted into the sorted prefix.`
+      return `Select ${event.data.item.value} at index ${event.data.index} as the value being inserted into the sorted prefix.`
     case 'READ':
-      return `Read ${event.data.readValues[0]} and ${event.data.readValues[1]} so their order can be checked.`
+      return `Read ${event.data.items[0].value} and ${event.data.items[1].value} so their order can be checked.`
     case 'COMPARE': {
-      const [left, right] = event.data.operands
+      const [left, right] = event.data.items.map(item => item.value)
       if (event.data.result === 'GREATER') return `Compare ${left} and ${right}. ${left} is greater, so these adjacent values must be swapped.`
       if (event.data.result === 'EQUAL') return `Compare ${left} and ${right}. They are equal, so their order is already valid and this insertion stops.`
       return `Compare ${left} and ${right}. ${left} is smaller, so the pair is ordered and this insertion stops.`
@@ -40,9 +40,9 @@ export function explainEvent(event: AlgorithmEvent): string {
     case 'SWAP':
       return `Swap indices ${event.data.indices.join(' and ')} because the value on the left is greater.`
     case 'WRITE':
-      return `Write ${event.data.writtenValues[0]} and ${event.data.writtenValues[1]} into indices ${event.data.indices.join(' and ')}.`
+      return `Write ${event.data.items[0].value} and ${event.data.items[1].value} into indices ${event.data.indices.join(' and ')}.`
     case 'MARK_SORTED':
-      return `Pass ${event.pass} is complete, so positions ${event.data.fromIndex} through ${event.data.throughIndex} now form a sorted prefix.`
+      return `Positions ${event.data.fromIndex} through ${event.data.throughIndex} now form a sorted prefix.`
     default:
       return 'Advance the algorithm.'
   }

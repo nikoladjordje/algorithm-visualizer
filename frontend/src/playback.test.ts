@@ -3,9 +3,9 @@ import { countEvents, nextStep, previousStep } from './playback'
 import type { AlgorithmEvent } from './types'
 
 const events: AlgorithmEvent[] = [
-  { sequence: 1, type: 'COMPARE', state: [2, 1], data: { indices: [0, 1], operands: [2, 1], result: 'GREATER' }, pseudocodeLineId: 'compare-adjacent', sortedThrough: 0, pass: 1 },
-  { sequence: 2, type: 'SWAP', state: [2, 1], data: { indices: [0, 1] }, pseudocodeLineId: 'swap-adjacent', sortedThrough: 0, pass: 1 },
-  { sequence: 3, type: 'COMPARE', state: [1, 2], data: { indices: [1, 2], operands: [1, 2], result: 'LESS' }, pseudocodeLineId: 'compare-adjacent', sortedThrough: 1, pass: 2 },
+  { sequence: 1, type: 'COMPARE', state: { kind: 'SORTING', items: [], sortedRanges: [] }, data: { kind: 'COMPARE', indices: [0, 1], items: [], result: 'GREATER' }, pseudocodeLineId: 'compare-adjacent' },
+  { sequence: 2, type: 'SWAP', state: { kind: 'SORTING', items: [], sortedRanges: [] }, data: { kind: 'SWAP', indices: [0, 1] }, pseudocodeLineId: 'swap-adjacent' },
+  { sequence: 3, type: 'COMPARE', state: { kind: 'SORTING', items: [], sortedRanges: [] }, data: { kind: 'COMPARE', indices: [1, 2], items: [], result: 'LESS' }, pseudocodeLineId: 'compare-adjacent' },
 ]
 
 describe('playback helpers', () => {

@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createInsertionSortTrace } from './api'
+import { createGraphTraversalTrace, createInsertionSortTrace } from './api'
 import type { AlgorithmTrace, ProblemDetail } from './types'
 
 const trace: AlgorithmTrace = {
-  apiVersion: '1.0',
-  algorithm: { id: 'insertion-sort', name: 'Insertion Sort' },
-  inputValues: [1],
-  summary: { resultValues: [1], eventCount: 0, operationCounts: { SELECT: 0, READ: 0, COMPARE: 0, SWAP: 0, WRITE: 0, MARK_SORTED: 0 } },
-  limits: { maxInputItems: 50, maxEvents: 10000 },
+  apiVersion: '2.0',
+  algorithm: { id: 'insertion', name: 'Insertion Sort', family: 'SORTING' },
+  input: { kind: 'SORTING', values: [1] },
+  result: { kind: 'SORTING', values: [1] },
+  limits: { maximumEvents: 10000 },
   events: [],
 }
 
@@ -15,12 +15,16 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('createInsertionSortTrace', () => {
   it('returns a successful trace', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(trace, 200)))
+    const fetchMock = vi.fn().mockResolvedValue(response(trace, 200))
+    vi.stubGlobal('fetch', fetchMock)
     await expect(createInsertionSortTrace([1])).resolves.toEqual(trace)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/insertion/trace', expect.objectContaining({
+      body: JSON.stringify({ kind: 'SORTING', values: [1] }),
+    }))
   })
 
   it('rejects unsupported API versions', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...trace, apiVersion: '2.0' }, 200)))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...trace, apiVersion: '3.0' }, 200)))
     await expect(createInsertionSortTrace([1])).rejects.toMatchObject({ kind: 'unavailable' })
   })
 
@@ -48,6 +52,23 @@ describe('createInsertionSortTrace', () => {
       : Promise.resolve(response({ code: 'INTERNAL_ERROR' }, 500))
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(fetchResult))
     await expect(createInsertionSortTrace([1])).rejects.toMatchObject({ kind: 'unavailable' })
+  })
+})
+
+describe('createGraphTraversalTrace', () => {
+  it('submits the typed single-node graph request', async () => {
+    const graphTrace = {
+      apiVersion: '2.0', algorithm: { id: 'bfs', name: 'Breadth-First Search', family: 'GRAPH_TRAVERSAL' },
+      input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A'], edges: [], startNode: 'A' },
+      result: { kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A'], parents: {}, unreachableNodes: [], visitedNodeCount: 1, edgeExaminationCount: 0, maximumQueueSize: 1 },
+      limits: { maximumEvents: 10000 }, events: [],
+    }
+    const fetchMock = vi.fn().mockResolvedValue(response(graphTrace, 200))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(createGraphTraversalTrace('A')).resolves.toEqual(graphTrace)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/bfs/trace', expect.objectContaining({
+      body: JSON.stringify({ kind: 'GRAPH_TRAVERSAL', nodes: ['A'], edges: [], startNode: 'A' }),
+    }))
   })
 })
 

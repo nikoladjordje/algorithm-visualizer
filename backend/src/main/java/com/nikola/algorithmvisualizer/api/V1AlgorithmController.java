@@ -35,8 +35,4 @@ public class V1AlgorithmController {
         return registry.require(algorithmId).execute(request.values());
     }
 
-    @PostMapping("/insertion-sort")
-    public VersionedAlgorithmTrace<?> legacyV1Insertion(@Valid @RequestBody SortRequest request) {
-        return registry.require("insertion").execute(request.values());
-    }
 }

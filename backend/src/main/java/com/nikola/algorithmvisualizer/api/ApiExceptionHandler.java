@@ -8,6 +8,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.nikola.algorithmvisualizer.trace.TraceLimitExceededException;
 import com.nikola.algorithmvisualizer.algorithm.AlgorithmNotFoundException;
@@ -37,10 +38,29 @@ public class ApiExceptionHandler {
                 "TRACE_LIMIT_EXCEEDED", "trace-limit-exceeded");
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    ProblemDetail handleInvalidArgument(IllegalArgumentException exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Invalid input", exception.getMessage(),
+                "INVALID_INPUT", "invalid-input");
+    }
+
     @ExceptionHandler(AlgorithmNotFoundException.class)
     ProblemDetail handleAlgorithmNotFound(AlgorithmNotFoundException exception) {
         return problem(HttpStatus.NOT_FOUND, "Algorithm not found", exception.getMessage(),
                 "ALGORITHM_NOT_FOUND", "algorithm-not-found");
+    }
+
+    @ExceptionHandler(AlgorithmFamilyMismatchException.class)
+    ProblemDetail handleAlgorithmFamilyMismatch(AlgorithmFamilyMismatchException exception) {
+        ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Algorithm family mismatch",
+                exception.getMessage(), "ALGORITHM_FAMILY_MISMATCH", "algorithm-family-mismatch");
+        problem.setProperty("field", "kind");
+        return problem;
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ProblemDetail handleNoResourceFound(NoResourceFoundException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
