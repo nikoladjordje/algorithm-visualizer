@@ -32,6 +32,9 @@ The v2 API uses family-discriminated contracts for sorting and graph traversal. 
 immutable snapshots and typed semantic events, allowing the frontend to render any playback step
 without reimplementing the algorithm.
 
+See the [v2 API reference](./backend/API_V2.md), [v1 compatibility reference](./backend/API_V1.md),
+and [workbench user guide](./docs/USER_GUIDE.md) for complete contracts and behavior.
+
 ## Prerequisites
 
 - Node.js 20.19 or newer
@@ -104,7 +107,7 @@ component remain unreached and are reported in declaration order when traversal 
 | Algorithm family | Status | Direction |
 | --- | --- | --- |
 | Sorting | Available | Expand explanations and compare algorithm behavior. |
-| Graph traversal | Available | Add graph presets and retain family-specific input drafts. |
+| Graph traversal | Available | Expand traversal algorithms and graph-editing tools. |
 | Searching | Proposed | Visualize linear and binary search over ordered and unordered data. |
 | Pathfinding | Proposed | Show frontier updates, explored nodes, and reconstructed shortest paths. |
 | Trees | Proposed | Explore traversal, search, insertion, and balancing operations. |
