@@ -57,9 +57,12 @@ export async function createAlgorithmTrace(algorithmId:string, values: number[],
 
 export function createInsertionSortTrace(values:number[]):Promise<AlgorithmTrace>{ return createAlgorithmTrace('insertion',values) }
 
-export async function createGraphTraversalTrace(node: string, signal?: AbortSignal): Promise<GraphTraversalTrace> {
+export async function createGraphTraversalTrace(
+  graph: { nodes: string[]; edges: { from: string; to: string }[]; startNode: string },
+  signal?: AbortSignal,
+): Promise<GraphTraversalTrace> {
   return requestTrace('/api/v2/algorithms/bfs/trace', {
-    kind: 'GRAPH_TRAVERSAL', nodes: [node], edges: [], startNode: node,
+    kind: 'GRAPH_TRAVERSAL', ...graph,
   }, signal) as Promise<GraphTraversalTrace>
 }
 

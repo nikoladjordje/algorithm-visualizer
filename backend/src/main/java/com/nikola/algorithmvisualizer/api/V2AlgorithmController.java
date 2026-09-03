@@ -29,6 +29,7 @@ import com.nikola.algorithmvisualizer.trace.SemanticEvent;
 import com.nikola.algorithmvisualizer.trace.SwapData;
 import com.nikola.algorithmvisualizer.trace.VersionedAlgorithmTrace;
 import com.nikola.algorithmvisualizer.trace.WriteData;
+import com.nikola.algorithmvisualizer.trace.TraceLimitExceededException;
 
 @RestController
 @RequestMapping("/api/v2/algorithms")
@@ -62,15 +63,24 @@ public class V2AlgorithmController {
     @PostMapping("/{algorithmId}/trace")
     @ResponseStatus(HttpStatus.OK)
     Object trace(@PathVariable String algorithmId, @RequestBody V2Request request) {
+        if (request == null || request.kind() == null) {
+            throw new IllegalArgumentException("Provide a request body with a kind");
+        }
         if ("bfs".equals(algorithmId)) {
             if (!GRAPH_TRAVERSAL.equals(request.kind())) {
                 throw new AlgorithmFamilyMismatchException(algorithmId, GRAPH_TRAVERSAL);
             }
-            validateSingleNodeGraph(request);
-            var graphTrace = breadthFirstSearch.execute(request.nodes(), request.startNode());
+            validateGraph(request);
+            var edges = request.edges().stream()
+                    .map(edge -> new BreadthFirstSearchAlgorithm.Edge(edge.from(), edge.to()))
+                    .toList();
+            var graphTrace = breadthFirstSearch.execute(request.nodes(), edges, request.startNode());
+            if (graphTrace.events().size() > MAXIMUM_EVENTS) {
+                throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            }
             return new V2Contracts.GraphTraversalTrace("2.0",
                     new V2Contracts.AlgorithmInfo("bfs", "Breadth-First Search", GRAPH_TRAVERSAL),
-                    new V2Contracts.GraphTraversalInput(GRAPH_TRAVERSAL, request.nodes(), List.of(),
+                    new V2Contracts.GraphTraversalInput(GRAPH_TRAVERSAL, request.nodes(), request.edges(),
                             request.startNode()),
                     graphTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), graphTrace.events());
         }
@@ -92,13 +102,30 @@ public class V2AlgorithmController {
                 trace.events().stream().map(V2AlgorithmController::toV2Event).toList());
     }
 
-    private static void validateSingleNodeGraph(V2Request request) {
-        if (request.nodes() == null || request.nodes().size() != 1 || request.startNode() == null
-                || !request.startNode().equals(request.nodes().getFirst())
-                || !request.startNode().matches("^[A-Za-z0-9_-]{1,16}$")
-                || (request.edges() != null && !request.edges().isEmpty())) {
-            throw new IllegalArgumentException("Single-node BFS requires one valid node, no edges, and that node as the start");
+    private static void validateGraph(V2Request request) {
+        if (request.nodes() == null || request.nodes().isEmpty() || request.nodes().size() > 12
+                || request.nodes().stream().anyMatch(node -> node == null
+                        || !node.matches("^[A-Za-z0-9_-]{1,16}$"))
+                || request.nodes().stream().distinct().count() != request.nodes().size()
+                || request.startNode() == null || !request.nodes().contains(request.startNode())
+                || request.edges() == null || request.edges().size() > 66
+                || request.edges().stream().anyMatch(edge -> edge == null || edge.from() == null
+                        || edge.to() == null || !request.nodes().contains(edge.from())
+                        || !request.nodes().contains(edge.to()) || edge.from().equals(edge.to()))
+                || hasDuplicateUndirectedEdges(request.edges())) {
+            throw new IllegalArgumentException("Provide a valid graph with 1–12 nodes, at most 66 edges, and a declared start node");
         }
+    }
+
+    private static boolean hasDuplicateUndirectedEdges(List<V2Contracts.GraphEdge> edges) {
+        var seen = new java.util.HashSet<java.util.Set<String>>();
+        for (var edge : edges) {
+            if (edge != null && edge.from() != null && edge.to() != null
+                    && !seen.add(java.util.Set.of(edge.from(), edge.to()))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static V2Contracts.SortingEvent toV2Event(SemanticEvent<?> event) {

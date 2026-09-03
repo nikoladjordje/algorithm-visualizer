@@ -44,4 +44,14 @@ describe('PlaybackControls', () => {
     expect(screen.getByRole('button', { name: 'Previous step' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next step' })).toBeDisabled()
   })
+
+  it('supports keyboard playback', async () => {
+    const user = userEvent.setup()
+    const props = renderControls()
+    screen.getByRole('button', { name: 'Play' }).focus()
+    await user.keyboard('{Enter}')
+    await user.keyboard('{Tab}{Tab}{Enter}')
+    expect(props.onPlayPause).toHaveBeenCalledOnce()
+    expect(props.onNext).toHaveBeenCalledOnce()
+  })
 })

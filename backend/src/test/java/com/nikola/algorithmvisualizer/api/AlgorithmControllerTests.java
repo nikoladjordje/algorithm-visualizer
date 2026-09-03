@@ -85,6 +85,86 @@ class AlgorithmControllerTests {
     }
 
     @Test
+    void runsConnectedBreadthFirstSearchThroughV2() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"kind":"GRAPH_TRAVERSAL","nodes":["A","C","B","D"],
+                                 "edges":[{"from":"A","to":"B"},{"from":"A","to":"C"},
+                                          {"from":"C","to":"D"},{"from":"B","to":"D"}],
+                                 "startNode":"A"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.edges.length()").value(4))
+                .andExpect(jsonPath("$.result.traversalOrder[0]").value("A"))
+                .andExpect(jsonPath("$.result.traversalOrder[1]").value("C"))
+                .andExpect(jsonPath("$.result.traversalOrder[2]").value("B"))
+                .andExpect(jsonPath("$.result.parents.D").value("C"))
+                .andExpect(jsonPath("$.result.edgeExaminationCount").value(8))
+                .andExpect(jsonPath("$.events[2].type").value("EDGE_EXAMINED"))
+                .andExpect(jsonPath("$.events[2].state.examinedEdge.to").value("C"))
+                .andExpect(jsonPath("$.events[3].type").value("NODE_DISCOVERED"))
+                .andExpect(jsonPath("$.events[3].data.parent").value("A"));
+    }
+
+    @Test
+    void rejectsInvalidGraphsWithProblemDetails() throws Exception {
+        for (String body : java.util.List.of(
+                "{}",
+                "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[],\"edges\":[],\"startNode\":\"A\"}",
+                "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\",\"A\"],\"edges\":[],\"startNode\":\"A\"}",
+                "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"bad label\"],\"edges\":[],\"startNode\":\"bad label\"}",
+                "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\"],\"edges\":[{\"from\":\"A\",\"to\":\"A\"}],\"startNode\":\"A\"}",
+                "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\",\"B\"],\"edges\":[{\"from\":\"A\",\"to\":\"B\"},{\"from\":\"B\",\"to\":\"A\"}],\"startNode\":\"A\"}",
+                "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\"],\"edges\":[{\"from\":\"A\",\"to\":\"B\"}],\"startNode\":\"A\"}",
+                "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\"],\"edges\":[],\"startNode\":\"B\"}")) {
+            mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.type").value("urn:problem:invalid-input"))
+                    .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+    }
+
+    @Test
+    void rejectsMalformedGraphRequestsAndFamilyMismatches() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":42}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"SORTING\",\"values\":[1]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ALGORITHM_FAMILY_MISMATCH"));
+    }
+
+    @Test
+    void acceptsMaximumGraphSizeAndReportsDisconnectedNodesInDeclarationOrder() throws Exception {
+        var nodes = java.util.stream.IntStream.range(0, 12).mapToObj(index -> "N" + index).toList();
+        var edges = new java.util.ArrayList<String>();
+        for (int from = 0; from < nodes.size(); from++) {
+            for (int to = from + 1; to < nodes.size(); to++) {
+                edges.add("{\"from\":\"" + nodes.get(from) + "\",\"to\":\"" + nodes.get(to) + "\"}");
+            }
+        }
+        String quotedNodes = nodes.stream().map(node -> "\"" + node + "\"")
+                .collect(java.util.stream.Collectors.joining(","));
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[" + quotedNodes
+                                + "],\"edges\":[" + String.join(",", edges) + "],\"startNode\":\"N0\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.nodes.length()").value(12))
+                .andExpect(jsonPath("$.input.edges.length()").value(66));
+
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\",\"C\",\"B\"],"
+                                + "\"edges\":[{\"from\":\"A\",\"to\":\"C\"}],\"startNode\":\"A\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.unreachableNodes[0]").value("B"))
+                .andExpect(jsonPath("$.events[-1].state.nodeStatuses.B").value("UNREACHED"));
+    }
+
+    @Test
     void returnsInsertionSortThroughTheDiscriminatedV2Trace() throws Exception {
         mockMvc.perform(post("/api/v2/algorithms/insertion/trace")
                         .contentType(MediaType.APPLICATION_JSON)

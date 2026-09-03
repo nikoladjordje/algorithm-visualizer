@@ -28,7 +28,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ProblemDetail handleMalformedRequest() {
         return problem(HttpStatus.BAD_REQUEST, "Malformed request",
-                "The request body must contain a valid JSON array of integers",
+                "The request body must contain valid JSON with fields of the expected types",
                 "MALFORMED_REQUEST", "malformed-request");
     }
 

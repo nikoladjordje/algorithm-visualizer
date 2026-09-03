@@ -56,7 +56,7 @@ describe('createInsertionSortTrace', () => {
 })
 
 describe('createGraphTraversalTrace', () => {
-  it('submits the typed single-node graph request', async () => {
+  it('submits the typed connected graph request', async () => {
     const graphTrace = {
       apiVersion: '2.0', algorithm: { id: 'bfs', name: 'Breadth-First Search', family: 'GRAPH_TRAVERSAL' },
       input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A'], edges: [], startNode: 'A' },
@@ -65,9 +65,13 @@ describe('createGraphTraversalTrace', () => {
     }
     const fetchMock = vi.fn().mockResolvedValue(response(graphTrace, 200))
     vi.stubGlobal('fetch', fetchMock)
-    await expect(createGraphTraversalTrace('A')).resolves.toEqual(graphTrace)
+    await expect(createGraphTraversalTrace({
+      nodes: ['A', 'B'], edges: [{ from: 'A', to: 'B' }], startNode: 'A',
+    })).resolves.toEqual(graphTrace)
     expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/bfs/trace', expect.objectContaining({
-      body: JSON.stringify({ kind: 'GRAPH_TRAVERSAL', nodes: ['A'], edges: [], startNode: 'A' }),
+      body: JSON.stringify({
+        kind: 'GRAPH_TRAVERSAL', nodes: ['A', 'B'], edges: [{ from: 'A', to: 'B' }], startNode: 'A',
+      }),
     }))
   })
 })
