@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, GraphTraversalTrace, ProblemDetail } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, GraphTraversalTrace, GraphEdge, ProblemDetail } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -58,7 +58,7 @@ export async function createAlgorithmTrace(algorithmId:string, values: number[],
 export function createInsertionSortTrace(values:number[]):Promise<AlgorithmTrace>{ return createAlgorithmTrace('insertion',values) }
 
 export async function createGraphTraversalTrace(
-  graph: { nodes: string[]; edges: { from: string; to: string }[]; startNode: string },
+  graph: { nodes: string[]; edges: GraphEdge[]; startNode: string },
   signal?: AbortSignal,
 ): Promise<GraphTraversalTrace> {
   return requestTrace('/api/v2/algorithms/bfs/trace', {

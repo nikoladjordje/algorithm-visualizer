@@ -38,6 +38,14 @@ public class ApiExceptionHandler {
                 "TRACE_LIMIT_EXCEEDED", "trace-limit-exceeded");
     }
 
+    @ExceptionHandler(GraphValidationException.class)
+    ProblemDetail handleInvalidGraph(GraphValidationException exception) {
+        var detail = problem(HttpStatus.BAD_REQUEST, "Invalid input", exception.getMessage(),
+                "INVALID_INPUT", "invalid-input");
+        detail.setProperty("field", exception.field());
+        return detail;
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     ProblemDetail handleInvalidArgument(IllegalArgumentException exception) {
         return problem(HttpStatus.BAD_REQUEST, "Invalid input", exception.getMessage(),

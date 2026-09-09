@@ -141,3 +141,12 @@ footer { color: #8d928e; font: 10px 'DM Mono', monospace; text-align: center; te
   .button-group .button { flex: 1; }
   .speed-control { width: 100%; justify-content: space-between; }
 }
+
+.graph-scroll { max-width: 100%; overflow: auto; max-height: 620px; }
+.graph-scroll:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.graph-weight rect { fill: #fffdf7; stroke: #515b55; stroke-width: 1; }
+.graph-visualizer .graph-weight text { font-size: 12px; }
+.graph-weight-connector { fill: none; stroke: #515b55; stroke-width: 1; stroke-dasharray: 2 3; }
+
+.visualizer-grid > div { min-width: 0; }
+.graph-state dd { overflow-wrap: anywhere; }

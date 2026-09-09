@@ -41,6 +41,26 @@ describe('parseGraphInput', () => {
     expect(parseGraphInput(input)).toBeNull()
   })
 
+  it('preserves mixed edges, quoted labels, whitespace, and explicit boundary weights', () => {
+    expect(parseGraphInput('A-B:1\n B - C : 99 \nC-D\n"node-one" - "node-two": 7\nZ')).toEqual({
+      nodes: ['A', 'B', 'C', 'D', 'node-one', 'node-two', 'Z'],
+      edges: [
+        { from: 'A', to: 'B', weight: 1 }, { from: 'B', to: 'C', weight: 99 },
+        { from: 'C', to: 'D' }, { from: 'node-one', to: 'node-two', weight: 7 },
+      ],
+    })
+  })
+
+  it.each(['0', '-1', '1.5', '', '100', 'Infinity', 'NaN', '1:2', '7 trailing', '1e1', '+1', '7-B'])('rejects invalid weight %j with its line number', weight => {
+    const validation = validateGraphInput(`Z\n\nA-B:${weight}`)
+    expect(validation.graph).toBeNull()
+    expect(validation.error).toContain('Line 3: edge weight must be an integer from 1 through 99')
+  })
+
+  it.each(['A-B:1\nB-A:99', 'A-B\nA-B:7', 'A-B:7\nB-A'])('rejects duplicate endpoint pairs independently of weight: %j', input => {
+    expect(validateGraphInput(input).error).toBe('Line 2: duplicate edge; first declared on line 1.')
+  })
+
   it('enforces graph size limits while accepting their boundaries', () => {
     const nodes = Array.from({ length: 12 }, (_, index) => `N${index}`)
     const completeGraph = nodes.flatMap((from, index) =>
@@ -48,6 +68,6 @@ describe('parseGraphInput', () => {
     expect(completeGraph).toHaveLength(66)
     expect(parseGraphInput(completeGraph.join('\n'))?.nodes).toHaveLength(12)
     expect(validateGraphInput(`${nodes.join('\n')}\nN12`).error).toContain('at most 12 nodes')
-    expect(validateGraphInput(`${completeGraph.join('\n')}\nN0-N1`).error).toContain('at most 66 edges')
+    expect(validateGraphInput(`${completeGraph.join('\n')}\nN0-N1:7`).error).toBe('Line 67: duplicate edge; first declared on line 1.')
   })
 })

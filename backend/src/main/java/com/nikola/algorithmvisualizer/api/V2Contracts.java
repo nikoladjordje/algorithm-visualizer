@@ -2,6 +2,9 @@ package com.nikola.algorithmvisualizer.api;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import tools.jackson.databind.annotation.JsonDeserialize;
+
 import com.nikola.algorithmvisualizer.algorithm.ComparisonResult;
 import com.nikola.algorithmvisualizer.trace.SortedRange;
 import com.nikola.algorithmvisualizer.trace.TraceItem;
@@ -22,7 +25,8 @@ final class V2Contracts {
             int minimumValue, int maximumValue) implements Constraints { }
 
     record GraphTraversalConstraints(String kind, int minimumNodes, int maximumNodes,
-            int maximumEdges, String nodeLabelPattern, boolean directed, boolean weighted)
+            int maximumEdges, String nodeLabelPattern, boolean directed, boolean weighted,
+            int minimumWeight, int maximumWeight)
             implements Constraints { }
 
     record AlgorithmInfo(String id, String name, String family) {
@@ -51,7 +55,9 @@ final class V2Contracts {
         }
     }
 
-    record GraphEdge(String from, String to) { }
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record GraphEdge(String from, String to,
+            @JsonDeserialize(using = EdgeWeightDeserializer.class) Integer weight) { }
 
     record GraphTraversalTrace(String apiVersion, AlgorithmInfo algorithm,
             GraphTraversalInput input, com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm.Result result,

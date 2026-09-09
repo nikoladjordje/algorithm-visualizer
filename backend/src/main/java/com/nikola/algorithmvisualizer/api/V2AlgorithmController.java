@@ -56,7 +56,7 @@ public class V2AlgorithmController {
         var catalog = new java.util.ArrayList<>(sorting);
         catalog.add(new V2Contracts.CatalogEntry("bfs", "Breadth-First Search", GRAPH_TRAVERSAL, "2.0",
                 new V2Contracts.GraphTraversalConstraints(GRAPH_TRAVERSAL, 1, 12, 66,
-                        "^[A-Za-z0-9_-]{1,16}$", false, false)));
+                        "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99)));
         return List.copyOf(catalog);
     }
 
@@ -103,29 +103,39 @@ public class V2AlgorithmController {
     }
 
     private static void validateGraph(V2Request request) {
-        if (request.nodes() == null || request.nodes().isEmpty() || request.nodes().size() > 12
-                || request.nodes().stream().anyMatch(node -> node == null
-                        || !node.matches("^[A-Za-z0-9_-]{1,16}$"))
-                || request.nodes().stream().distinct().count() != request.nodes().size()
-                || request.startNode() == null || !request.nodes().contains(request.startNode())
-                || request.edges() == null || request.edges().size() > 66
-                || request.edges().stream().anyMatch(edge -> edge == null || edge.from() == null
-                        || edge.to() == null || !request.nodes().contains(edge.from())
-                        || !request.nodes().contains(edge.to()) || edge.from().equals(edge.to()))
-                || hasDuplicateUndirectedEdges(request.edges())) {
-            throw new IllegalArgumentException("Provide a valid graph with 1–12 nodes, at most 66 edges, and a declared start node");
+        if (request.nodes() == null || request.nodes().isEmpty() || request.nodes().size() > 12) {
+            throw new GraphValidationException("nodes", "Provide between 1 and 12 nodes");
         }
-    }
-
-    private static boolean hasDuplicateUndirectedEdges(List<V2Contracts.GraphEdge> edges) {
-        var seen = new java.util.HashSet<java.util.Set<String>>();
-        for (var edge : edges) {
-            if (edge != null && edge.from() != null && edge.to() != null
-                    && !seen.add(java.util.Set.of(edge.from(), edge.to()))) {
-                return true;
+        if (request.nodes().stream().anyMatch(node -> node == null || !node.matches("^[A-Za-z0-9_-]{1,16}$"))
+                || request.nodes().stream().distinct().count() != request.nodes().size()) {
+            throw new GraphValidationException("nodes", "Node labels must be unique and contain 1–16 letters, numbers, underscores, or hyphens");
+        }
+        if (request.startNode() == null || !request.nodes().contains(request.startNode())) {
+            throw new GraphValidationException("startNode", "Select a declared start node");
+        }
+        if (request.edges() == null || request.edges().size() > 66) {
+            throw new GraphValidationException("edges", "Provide an edge list with at most 66 edges");
+        }
+        var seen = new java.util.HashMap<java.util.Set<String>, Integer>();
+        for (int index = 0; index < request.edges().size(); index++) {
+            var edge = request.edges().get(index);
+            String field = "edges[" + index + "]";
+            if (edge == null || edge.from() == null || edge.to() == null
+                    || !request.nodes().contains(edge.from()) || !request.nodes().contains(edge.to())) {
+                throw new GraphValidationException(field, "Edge " + (index + 1) + " must connect two declared nodes");
+            }
+            if (edge.from().equals(edge.to())) {
+                throw new GraphValidationException(field, "Edge " + (index + 1) + ": self-loops are not allowed");
+            }
+            if (edge.weight() != null && (edge.weight() < 1 || edge.weight() > 99)) {
+                throw new GraphValidationException(field + ".weight", "Edge " + (index + 1) + ": weight must be an integer from 1 through 99");
+            }
+            Integer original = seen.putIfAbsent(java.util.Set.of(edge.from(), edge.to()), index);
+            if (original != null) {
+                throw new GraphValidationException(field, "Edge " + (index + 1)
+                        + ": duplicate edge; first declared as edge " + (original + 1));
             }
         }
-        return false;
     }
 
     private static V2Contracts.SortingEvent toV2Event(SemanticEvent<?> event) {

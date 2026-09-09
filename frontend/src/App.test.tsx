@@ -10,6 +10,58 @@ const trace={apiVersion:'2.0',algorithm:{id:'insertion',name:'Insertion Sort',fa
 beforeEach(()=>{history.replaceState(null,'','/');vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?catalog:trace),{status:200,headers:{'Content-Type':'application/json'}})))})
 afterEach(()=>vi.unstubAllGlobals())
 describe('App algorithm workbench',()=>{
+ it.each([false, true])('filters incompatible adapters on catalog load and retry (%s)', async retry => {
+  history.replaceState(null, '', '/?algorithm=dfs')
+  const entries = [
+   ...fullCatalog,
+   { ...graphCatalog, id: 'dfs', name: 'Depth-First Search' },
+   { ...graphCatalog, id: 'insertion', name: 'Wrong graph family' },
+   { ...catalog[0], id: 'bfs', name: 'Wrong sorting family' },
+   { ...graphCatalog, id: 'future-bfs', contractVersion: '3.0', name: 'Future graph' },
+   { ...catalog[0], id: 'toString', name: 'Unknown sorting algorithm' },
+  ]
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(entries)))
+  if (retry) fetchMock.mockRejectedValueOnce(new Error('offline'))
+  vi.stubGlobal('fetch', fetchMock)
+  render(<App />)
+  if (retry) await userEvent.click(await screen.findByRole('button', { name: 'Retry catalog' }))
+  await screen.findByRole('option', { name: 'Breadth-First Search' })
+  expect(within(screen.getByLabelText('Algorithm')).getAllByRole('option').map(option => option.textContent)).toEqual(['Insertion Sort', 'Selection Sort', 'Breadth-First Search'])
+  expect(screen.getByLabelText('Algorithm')).toHaveValue('insertion')
+ })
+ it('submits mixed weights and keeps the BFS explanation visible during playback, reset, and draft changes', async () => {
+  const graphTrace = {
+   apiVersion: '2.0', algorithm: { id: 'bfs', name: 'Breadth-First Search', family: 'GRAPH_TRAVERSAL' },
+   input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A', 'B', 'C'], edges: [{ from: 'A', to: 'B', weight: 1 }, { from: 'B', to: 'C' }], startNode: 'A' },
+   result: { kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A', 'B', 'C'], parents: { B: 'A', C: 'B' }, unreachableNodes: [], visitedNodeCount: 3, edgeExaminationCount: 4, maximumQueueSize: 1 },
+   limits: { maximumEvents: 10000 },
+   events: [{ sequence: 1, type: 'TRAVERSAL_COMPLETED', pseudocodeLineId: 'bfs-complete-traversal', state: { kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'PROCESSED', B: 'PROCESSED', C: 'PROCESSED' }, queue: [], traversalOrder: ['A', 'B', 'C'], parents: { B: 'A', C: 'B' }, examinedEdge: null }, data: { kind: 'TRAVERSAL_COMPLETED', traversalOrder: ['A', 'B', 'C'], unreachableNodes: [] } }],
+  }
+  const fetchMock = vi.fn(async (url: RequestInfo | URL) => new Response(JSON.stringify(String(url).endsWith('/api/v2/algorithms') ? fullCatalog : graphTrace)))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'bfs')
+  expect(screen.queryByText(/ignores edge weights/)).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-B:1\nB-C' } })
+  expect(screen.getByText(/ignores edge weights.*minimize edge count, not total cost/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+  await screen.findByRole('img')
+  expect(fetch).toHaveBeenLastCalledWith('/api/v2/algorithms/bfs/trace', expect.objectContaining({ body: JSON.stringify(graphTrace.input) }))
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText(/ignores edge weights/)).toBeInTheDocument()
+  expect(screen.getByRole('group', { name: 'A–B, weight 1' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Reset' }))
+  fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-B' } })
+  expect(screen.getByText(/ignores edge weights/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Branching' }))
+  expect(screen.queryByText(/ignores edge weights/)).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-B:0' } })
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+  expect(screen.getByRole('alert')).toHaveTextContent('Line 1: edge weight must be an integer from 1 through 99')
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+ })
+
  it('loads the v2 insertion algorithm',async()=>{render(<App/>);expect(await screen.findByRole('option',{name:'Insertion Sort'})).toBeInTheDocument()})
  it('keeps the input unchanged while building a trace',async()=>{const user=userEvent.setup();render(<App/>);await screen.findByRole('option',{name:'Insertion Sort'});const input=screen.getByLabelText('Array values');await user.clear(input);await user.type(input,'9, 4');await user.click(screen.getByRole('button',{name:'Visualize'}));await screen.findByRole('img');expect(input).toHaveValue('9, 4');expect(fetch).toHaveBeenCalledTimes(2)})
  it('executes only on request and supports navigation',async()=>{const user=userEvent.setup();render(<App/>);await screen.findByRole('option',{name:'Insertion Sort'});expect(fetch).toHaveBeenCalledTimes(1);await user.click(screen.getByRole('button',{name:'Visualize'}));await screen.findByRole('img');expect(fetch).toHaveBeenCalledTimes(2);await user.click(screen.getByRole('button',{name:'Next step'}));expect(screen.getByText('Complete')).toBeInTheDocument()})

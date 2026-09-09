@@ -25,7 +25,9 @@
         "maximumEdges": 66,
         "nodeLabelPattern": "^[A-Za-z0-9_-]{1,16}$",
         "directed": false,
-        "weighted": false
+        "weighted": true,
+        "minimumWeight": 1,
+        "maximumWeight": 99
       }
     }
   ],

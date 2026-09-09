@@ -49,7 +49,7 @@ class V2ContractFixturesTests {
                 "kind", "minimumValues", "maximumValues", "minimumValue", "maximumValue");
         assertThat(fieldNames(graph)).containsExactlyInAnyOrder(
                 "kind", "minimumNodes", "maximumNodes", "maximumEdges",
-                "nodeLabelPattern", "directed", "weighted");
+                "nodeLabelPattern", "directed", "weighted", "minimumWeight", "maximumWeight");
         assertThat(fieldNames(sorting)).doesNotContainAnyElementsOf(fieldNames(graph).stream()
                 .filter(field -> !field.equals("kind"))
                 .toList());

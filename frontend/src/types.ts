@@ -63,7 +63,7 @@ export interface SortingAlgorithmCatalogEntry {
 }
 
 export type NodeStatus = 'UNREACHED' | 'DISCOVERED' | 'ACTIVE' | 'PROCESSED'
-export interface GraphEdge { from: string; to: string }
+export interface GraphEdge { from: string; to: string; weight?: number }
 export interface GraphTraversalState {
   kind: 'GRAPH_TRAVERSAL'
   nodeStatuses: Record<string, NodeStatus>
@@ -107,8 +107,8 @@ export interface GraphTraversalTrace {
   events: GraphTraversalEvent[]
 }
 export interface GraphAlgorithmCatalogEntry {
-  id: 'bfs'
-  name: 'Breadth-First Search'
+  id: string
+  name: string
   family: 'GRAPH_TRAVERSAL'
   contractVersion: '2.0'
   constraints: {
@@ -118,7 +118,9 @@ export interface GraphAlgorithmCatalogEntry {
     maximumEdges: number
     nodeLabelPattern: string
     directed: false
-    weighted: false
+    weighted: boolean
+    minimumWeight?: number
+    maximumWeight?: number
   }
 }
 export type AlgorithmCatalogEntry = SortingAlgorithmCatalogEntry | GraphAlgorithmCatalogEntry

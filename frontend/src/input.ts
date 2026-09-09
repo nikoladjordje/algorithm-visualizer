@@ -1,8 +1,10 @@
+import type { GraphEdge } from './types'
+
 export const MAX_VALUES = 50
 
 export interface ParsedGraph {
   nodes: string[]
-  edges: { from: string; to: string }[]
+  edges: GraphEdge[]
 }
 
 export interface GraphInputValidation {
@@ -12,7 +14,7 @@ export interface GraphInputValidation {
 
 const labelPattern = '(?:"([A-Za-z0-9_-]{1,16})"|([A-Za-z0-9_]{1,16}))'
 const standalonePattern = new RegExp(`^${labelPattern}$`)
-const edgePattern = new RegExp(`^${labelPattern}\\s*-\\s*${labelPattern}$`)
+const edgePattern = new RegExp(`^${labelPattern}\\s*-\\s*${labelPattern}(?:\\s*:(.*))?$`)
 
 export function validateGraphInput(input: string): GraphInputValidation {
   const nodes: string[] = []
@@ -35,18 +37,23 @@ export function validateGraphInput(input: string): GraphInputValidation {
     if (edge) {
       const from = edge[1] ?? edge[2]
       const to = edge[3] ?? edge[4]
+      const authoredWeight = edge[5]?.trim()
+      if (authoredWeight !== undefined && (!/^\d+$/.test(authoredWeight)
+          || Number(authoredWeight) < 1 || Number(authoredWeight) > 99)) {
+        return { graph: null, error: `Line ${lineNumber}: edge weight must be an integer from 1 through 99 (for example A-B:7).` }
+      }
       if (from === to) return { graph: null, error: `Line ${lineNumber}: self-loops are not allowed.` }
-      if (edges.length === 66) return { graph: null, error: 'A graph may contain at most 66 edges.' }
       const key = [from, to].sort().join('\0')
       const originalLine = edgeLines.get(key)
       if (originalLine) {
         return { graph: null, error: `Line ${lineNumber}: duplicate edge; first declared on line ${originalLine}.` }
       }
+      if (edges.length === 66) return { graph: null, error: 'A graph may contain at most 66 edges.' }
       edgeLines.set(key, lineNumber)
       addNode(from, lineNumber)
       addNode(to, lineNumber)
       if (nodes.length > 12) return { graph: null, error: 'A graph may contain at most 12 nodes.' }
-      edges.push({ from, to })
+      edges.push(authoredWeight === undefined ? { from, to } : { from, to, weight: Number(authoredWeight) })
       continue
     }
     const standalone = standalonePattern.exec(line)
