@@ -5,6 +5,7 @@ import App from './App'
 const constraints={kind:'SORTING',minimumValues:1,maximumValues:50,minimumValue:-2147483648,maximumValue:2147483647}
 const catalog=[{id:'insertion',name:'Insertion Sort',family:'SORTING',contractVersion:'2.0',constraints}]
 const graphCatalog={id:'bfs',name:'Breadth-First Search',family:'GRAPH_TRAVERSAL',contractVersion:'2.0',constraints:{kind:'GRAPH_TRAVERSAL',minimumNodes:1,maximumNodes:12,maximumEdges:66,nodeLabelPattern:'^[A-Za-z0-9_-]{1,16}$',directed:false,weighted:false}}
+const dfsCatalog={...graphCatalog,id:'dfs',name:'Depth-First Search',constraints:{...graphCatalog.constraints,maximumNodes:1,maximumEdges:0}}
 const fullCatalog=[...catalog,{id:'selection',name:'Selection Sort',family:'SORTING',contractVersion:'2.0',constraints},graphCatalog]
 const trace={apiVersion:'2.0',algorithm:{id:'insertion',name:'Insertion Sort',family:'SORTING'},input:{kind:'SORTING',values:[2,1]},result:{kind:'SORTING',values:[1,2]},limits:{maximumEvents:10000},events:[{sequence:1,type:'MARK_SORTED',pseudocodeLineId:'complete-pass',state:{kind:'SORTING',items:[{id:1,value:1},{id:0,value:2}],sortedRanges:[{fromIndex:0,throughIndex:1}]},data:{kind:'MARK_SORTED',fromIndex:0,throughIndex:1}}]}
 beforeEach(()=>{history.replaceState(null,'','/');vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?catalog:trace),{status:200,headers:{'Content-Type':'application/json'}})))})
@@ -14,7 +15,7 @@ describe('App algorithm workbench',()=>{
   history.replaceState(null, '', '/?algorithm=dfs')
   const entries = [
    ...fullCatalog,
-   { ...graphCatalog, id: 'dfs', name: 'Depth-First Search' },
+   dfsCatalog,
    { ...graphCatalog, id: 'insertion', name: 'Wrong graph family' },
    { ...catalog[0], id: 'bfs', name: 'Wrong sorting family' },
    { ...graphCatalog, id: 'future-bfs', contractVersion: '3.0', name: 'Future graph' },
@@ -26,8 +27,8 @@ describe('App algorithm workbench',()=>{
   render(<App />)
   if (retry) await userEvent.click(await screen.findByRole('button', { name: 'Retry catalog' }))
   await screen.findByRole('option', { name: 'Breadth-First Search' })
-  expect(within(screen.getByLabelText('Algorithm')).getAllByRole('option').map(option => option.textContent)).toEqual(['Insertion Sort', 'Selection Sort', 'Breadth-First Search'])
-  expect(screen.getByLabelText('Algorithm')).toHaveValue('insertion')
+  expect(within(screen.getByLabelText('Algorithm')).getAllByRole('option').map(option => option.textContent)).toEqual(['Insertion Sort', 'Selection Sort', 'Breadth-First Search', 'Depth-First Search'])
+  expect(screen.getByLabelText('Algorithm')).toHaveValue('dfs')
  })
  it('submits mixed weights and keeps the BFS explanation visible during playback, reset, and draft changes', async () => {
   const graphTrace = {
@@ -77,4 +78,48 @@ describe('App algorithm workbench',()=>{
  it('selects either family from the URL without encoding drafts',async()=>{history.replaceState(null,'','/?algorithm=bfs');vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}})));render(<App/>);await waitFor(()=>expect(screen.getByLabelText('Algorithm')).toHaveValue('bfs'));expect(screen.getByLabelText('Graph input')).toHaveValue('A');expect(location.search).toBe('?algorithm=bfs');expect(fetch).toHaveBeenCalledOnce()})
 
  it('cancels an in-flight trace and ignores its stale response after switching families',async()=>{let resolveTrace!:(response:Response)=>void;const pending=new Promise<Response>(resolve=>{resolveTrace=resolve});let traceSignal:AbortSignal|undefined;const fetchMock=vi.fn((input:RequestInfo|URL,init?:RequestInit)=>{if(String(input).endsWith('/api/v2/algorithms'))return Promise.resolve(new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}}));traceSignal=init?.signal as AbortSignal;return pending});vi.stubGlobal('fetch',fetchMock);const user=userEvent.setup();render(<App/>);const algorithm=await screen.findByLabelText('Algorithm');await user.selectOptions(algorithm,'bfs');await user.click(screen.getByRole('button',{name:'Visualize'}));expect(screen.getByRole('button',{name:'Building…'})).toBeDisabled();await user.selectOptions(algorithm,'insertion');expect(traceSignal?.aborted).toBe(true);resolveTrace(new Response(JSON.stringify({apiVersion:'2.0',algorithm:{family:'GRAPH_TRAVERSAL'},events:[]}),{status:200,headers:{'Content-Type':'application/json'}}));await waitFor(()=>expect(screen.getByLabelText('Array values')).toBeInTheDocument());expect(screen.queryByRole('img',{name:/Breadth-first traversal graph/})).not.toBeInTheDocument();expect(screen.getByText('Ready')).toBeInTheDocument()})
+
+ it('runs and plays the complete single-node DFS experience', async () => {
+  const dfsTrace = {
+   apiVersion: '2.0', algorithm: { id: 'dfs', name: 'Depth-First Search', family: 'GRAPH_TRAVERSAL' },
+   input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A'], edges: [], startNode: 'A' },
+   result: { kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A'], parents: {}, unreachableNodes: [], visitedNodeCount: 1, edgeExaminationCount: 0, maximumStackSize: 1 },
+   limits: { maximumEvents: 10000 },
+   events: [
+    { sequence: 1, type: 'TRAVERSAL_INITIALIZED', pseudocodeLineId: 'dfs-initialize', state: { kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'DISCOVERED' }, stack: ['A'], traversalOrder: [], parents: {}, examinedEdge: null }, data: { kind: 'TRAVERSAL_INITIALIZED', startNode: 'A' } },
+    { sequence: 2, type: 'NODE_POPPED', pseudocodeLineId: 'dfs-pop', state: { kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'ACTIVE' }, stack: [], traversalOrder: ['A'], parents: {}, examinedEdge: null }, data: { kind: 'NODE_POPPED', node: 'A' } },
+    { sequence: 3, type: 'NODE_COMPLETED', pseudocodeLineId: 'dfs-complete-node', state: { kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'PROCESSED' }, stack: [], traversalOrder: ['A'], parents: {}, examinedEdge: null }, data: { kind: 'NODE_COMPLETED', node: 'A' } },
+    { sequence: 4, type: 'TRAVERSAL_COMPLETED', pseudocodeLineId: 'dfs-complete-traversal', state: { kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'PROCESSED' }, stack: [], traversalOrder: ['A'], parents: {}, examinedEdge: null }, data: { kind: 'TRAVERSAL_COMPLETED', traversalOrder: ['A'], unreachableNodes: [] } },
+   ],
+  }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(
+   String(input).endsWith('/api/v2/algorithms') ? [...catalog, graphCatalog, dfsCatalog] : dfsTrace,
+  ), { headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'dfs')
+  expect(screen.getByRole('heading', { name: 'Depth-First Search' })).toBeInTheDocument()
+  expect(screen.getByText('mark start discovered; push start onto stack')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+  expect(fetchMock).toHaveBeenLastCalledWith('/api/v2/algorithms/dfs/trace', expect.objectContaining({
+   body: JSON.stringify(dfsTrace.input),
+  }))
+  expect(await screen.findByRole('img', { name: /Depth-first traversal graph/ })).toBeInTheDocument()
+  expect(screen.getByLabelText('Traversal metrics')).toHaveTextContent('1visited0edges examined1max stack')
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getAllByText('Discover and push A onto the stack.')).toHaveLength(2)
+  expect(screen.getByText('A: discovered')).toBeInTheDocument()
+  expect(screen.getByText('Stack (top first)').nextSibling).toHaveTextContent('A')
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getAllByText('Pop and visit A.')).toHaveLength(2)
+  expect(screen.getByText('A: active')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('A: processed')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('Depth-first traversal is complete. Unreachable nodes: none.')).toBeInTheDocument()
+  expect(screen.getAllByRole('status')).toEqual(expect.arrayContaining([
+   expect.objectContaining({ textContent: 'Depth-first traversal complete.' }),
+  ]))
+ })
 })

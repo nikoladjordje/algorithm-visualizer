@@ -66,6 +66,14 @@ final class V2Contracts {
         GraphTraversalTrace { events = List.copyOf(events); }
     }
 
+    record DepthFirstSearchTrace(String apiVersion, AlgorithmInfo algorithm,
+            GraphTraversalInput input,
+            com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm.Result result,
+            Limits limits,
+            List<com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm.Event> events) {
+        DepthFirstSearchTrace { events = List.copyOf(events); }
+    }
+
     record SortingState(String kind, List<TraceItem> items, List<SortedRange> sortedRanges) {
         SortingState {
             items = List.copyOf(items);

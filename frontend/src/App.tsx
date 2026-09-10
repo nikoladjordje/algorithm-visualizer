@@ -10,7 +10,7 @@ import { Timeline } from './components/Timeline'
 import { parseGraphInput,parseIntegerList,validateGraphInput } from './input'
 import { resolveAlgorithmAdapter } from './algorithmCapabilities'
 import { nextStep,previousStep } from './playback'
-import type { AlgorithmCatalogEntry,AlgorithmTrace,GraphTraversalTrace,MetricType,TraceItem,VisualizerTrace } from './types'
+import type { AlgorithmCatalogEntry,AlgorithmTrace,GraphAlgorithmTrace,MetricType,TraceItem,VisualizerTrace } from './types'
 import './App.css'
 const SAMPLE_INPUT='8, 3, 5, 1, 9, 6, 2, 7, 4'
 type RequestState='empty'|'loading'|'ready'|'unavailable'
@@ -26,7 +26,7 @@ function App(){
  const effectiveStart=parsedGraph?.nodes.includes(selectedStart)?selectedStart:parsedGraph?.nodes[0]??''
  const adapter=capability?.family==='SORTING'?capability.adapter:adapters.insertion
  const learningAdapter=graphAdapter??adapter
- const graphTrace:GraphTraversalTrace|null=trace?.algorithm.family==='GRAPH_TRAVERSAL'?trace as GraphTraversalTrace:null
+ const graphTrace:GraphAlgorithmTrace|null=trace?.algorithm.family==='GRAPH_TRAVERSAL'?trace as GraphAlgorithmTrace:null
  const sortingTrace:AlgorithmTrace|null=trace?.algorithm.family==='SORTING'?trace as AlgorithmTrace:null
  const graphEvent=graphTrace&&step>=0?graphTrace.events[step]:undefined,sortingEvent=sortingTrace&&step>=0?sortingTrace.events[step]:undefined,event=graphEvent??sortingEvent,atStart=step<0,atEnd=!trace||step>=trace.events.length-1,completed=requestState==='ready'&&!!trace&&atEnd
  const counts=useMemo(()=>Object.fromEntries(adapter.metrics.map(metric=>[metric,(sortingTrace?.events.slice(0,step+1)??[]).filter(e=>e.type===metricEvent[metric]).length])),[adapter.metrics,step,sortingTrace])

@@ -106,6 +106,49 @@ export interface GraphTraversalTrace {
   limits: { maximumEvents: number }
   events: GraphTraversalEvent[]
 }
+export interface DepthFirstSearchState {
+  kind: 'GRAPH_TRAVERSAL'
+  nodeStatuses: Record<string, NodeStatus>
+  stack: string[]
+  traversalOrder: string[]
+  parents: Record<string, string>
+  examinedEdge: GraphEdge | null
+}
+interface DepthFirstSearchEventDataByType {
+  TRAVERSAL_INITIALIZED: { kind: 'TRAVERSAL_INITIALIZED'; startNode: string }
+  NODE_POPPED: { kind: 'NODE_POPPED'; node: string }
+  NODE_COMPLETED: { kind: 'NODE_COMPLETED'; node: string }
+  TRAVERSAL_COMPLETED: { kind: 'TRAVERSAL_COMPLETED'; traversalOrder: string[]; unreachableNodes: string[] }
+}
+export type DepthFirstSearchEvent = {
+  [Type in keyof DepthFirstSearchEventDataByType]: {
+    sequence: number
+    type: Type
+    pseudocodeLineId: string
+    state: DepthFirstSearchState
+    data: DepthFirstSearchEventDataByType[Type]
+  }
+}[keyof DepthFirstSearchEventDataByType]
+export interface DepthFirstSearchTrace {
+  apiVersion: '2.0'
+  algorithm: { id: 'dfs'; name: 'Depth-First Search'; family: 'GRAPH_TRAVERSAL' }
+  input: { kind: 'GRAPH_TRAVERSAL'; nodes: string[]; edges: GraphEdge[]; startNode: string }
+  result: {
+    kind: 'GRAPH_TRAVERSAL'
+    traversalOrder: string[]
+    parents: Record<string, string>
+    unreachableNodes: string[]
+    visitedNodeCount: number
+    edgeExaminationCount: number
+    maximumStackSize: number
+  }
+  limits: { maximumEvents: number }
+  events: DepthFirstSearchEvent[]
+}
+export type GraphAlgorithmTrace = GraphTraversalTrace | DepthFirstSearchTrace
+export type GraphAlgorithmState = GraphTraversalState | DepthFirstSearchState
+export type GraphAlgorithmEvent = GraphTraversalEvent | DepthFirstSearchEvent
+export type GraphAlgorithmResult = GraphAlgorithmTrace['result']
 export interface GraphAlgorithmCatalogEntry {
   id: string
   name: string
@@ -124,7 +167,7 @@ export interface GraphAlgorithmCatalogEntry {
   }
 }
 export type AlgorithmCatalogEntry = SortingAlgorithmCatalogEntry | GraphAlgorithmCatalogEntry
-export type VisualizerTrace = AlgorithmTrace | GraphTraversalTrace
+export type VisualizerTrace = AlgorithmTrace | GraphAlgorithmTrace
 
 export type MetricType = 'COMPARISONS' | 'READS' | 'WRITES' | 'SWAPS'
 export interface ProblemDetail { type: string; title: string; status: number; detail: string; instance: string; code: string; field?: string }

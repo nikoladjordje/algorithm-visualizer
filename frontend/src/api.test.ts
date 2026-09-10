@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createGraphTraversalTrace, createInsertionSortTrace } from './api'
+import { createDepthFirstSearchTrace, createGraphTraversalTrace, createInsertionSortTrace } from './api'
 import type { AlgorithmTrace, ProblemDetail } from './types'
 
 const trace: AlgorithmTrace = {
@@ -72,6 +72,24 @@ describe('createGraphTraversalTrace', () => {
       body: JSON.stringify({
         kind: 'GRAPH_TRAVERSAL', nodes: ['A', 'B'], edges: [{ from: 'A', to: 'B' }], startNode: 'A',
       }),
+    }))
+  })
+})
+
+describe('createDepthFirstSearchTrace', () => {
+  it('submits the typed single-node graph request to DFS', async () => {
+    const graphTrace = {
+      apiVersion: '2.0', algorithm: { id: 'dfs', name: 'Depth-First Search', family: 'GRAPH_TRAVERSAL' },
+      input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A'], edges: [], startNode: 'A' },
+      result: { kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A'], parents: {}, unreachableNodes: [], visitedNodeCount: 1, edgeExaminationCount: 0, maximumStackSize: 1 },
+      limits: { maximumEvents: 10000 }, events: [],
+    }
+    const fetchMock = vi.fn().mockResolvedValue(response(graphTrace, 200))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(createDepthFirstSearchTrace({ nodes: ['A'], edges: [], startNode: 'A' }))
+      .resolves.toEqual(graphTrace)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/dfs/trace', expect.objectContaining({
+      body: JSON.stringify({ kind: 'GRAPH_TRAVERSAL', nodes: ['A'], edges: [], startNode: 'A' }),
     }))
   })
 })

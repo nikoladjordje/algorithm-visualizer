@@ -22,7 +22,7 @@ class AlgorithmControllerTests {
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(7))
+                .andExpect(jsonPath("$.length()").value(8))
                 .andExpect(jsonPath("$[0].id").value("insertion"))
                 .andExpect(jsonPath("$[1].id").value("selection"))
                 .andExpect(jsonPath("$[2].id").value("bubble"))
@@ -57,7 +57,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeBreadthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(7))
+                .andExpect(jsonPath("$.length()").value(8))
                 .andExpect(jsonPath("$[6].id").value("bfs"))
                 .andExpect(jsonPath("$[6].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[6].constraints.kind").value("GRAPH_TRAVERSAL"));
@@ -82,6 +82,63 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.events[2].type").value("NODE_COMPLETED"))
                 .andExpect(jsonPath("$.events[2].state.nodeStatuses.A").value("PROCESSED"))
                 .andExpect(jsonPath("$.events[3].type").value("TRAVERSAL_COMPLETED"));
+    }
+
+    @Test
+    void runsSingleNodeIterativeDepthFirstSearchThroughV2() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$[7].id").value("dfs"))
+                .andExpect(jsonPath("$[7].family").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$[7].constraints.kind").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$[7].constraints.maximumNodes").value(1))
+                .andExpect(jsonPath("$[7].constraints.maximumEdges").value(0));
+
+        mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\"],\"edges\":[],\"startNode\":\"A\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.algorithm.id").value("dfs"))
+                .andExpect(jsonPath("$.algorithm.family").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$.input.destination").doesNotExist())
+                .andExpect(jsonPath("$.result.traversalOrder[0]").value("A"))
+                .andExpect(jsonPath("$.result.parents").isEmpty())
+                .andExpect(jsonPath("$.result.unreachableNodes").isEmpty())
+                .andExpect(jsonPath("$.result.visitedNodeCount").value(1))
+                .andExpect(jsonPath("$.result.edgeExaminationCount").value(0))
+                .andExpect(jsonPath("$.result.maximumStackSize").value(1))
+                .andExpect(jsonPath("$.result.maximumQueueSize").doesNotExist())
+                .andExpect(jsonPath("$.events.length()").value(4))
+                .andExpect(jsonPath("$.events[0].sequence").value(1))
+                .andExpect(jsonPath("$.events[0].type").value("TRAVERSAL_INITIALIZED"))
+                .andExpect(jsonPath("$.events[0].state.nodeStatuses.A").value("DISCOVERED"))
+                .andExpect(jsonPath("$.events[0].state.stack[0]").value("A"))
+                .andExpect(jsonPath("$.events[1].sequence").value(2))
+                .andExpect(jsonPath("$.events[1].type").value("NODE_POPPED"))
+                .andExpect(jsonPath("$.events[1].state.nodeStatuses.A").value("ACTIVE"))
+                .andExpect(jsonPath("$.events[1].state.stack").isEmpty())
+                .andExpect(jsonPath("$.events[2].sequence").value(3))
+                .andExpect(jsonPath("$.events[2].type").value("NODE_COMPLETED"))
+                .andExpect(jsonPath("$.events[2].state.nodeStatuses.A").value("PROCESSED"))
+                .andExpect(jsonPath("$.events[3].sequence").value(4))
+                .andExpect(jsonPath("$.events[3].type").value("TRAVERSAL_COMPLETED"));
+    }
+
+    @Test
+    void rejectsDepthFirstSearchOutsideTheSingleNodeSlice() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\",\"B\"],\"edges\":[],\"startNode\":\"A\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.field").value("nodes"));
+
+        mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"SORTING\",\"values\":[1]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ALGORITHM_FAMILY_MISMATCH"));
     }
 
     @Test

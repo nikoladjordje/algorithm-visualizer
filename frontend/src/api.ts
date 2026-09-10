@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, GraphTraversalTrace, GraphEdge, ProblemDetail } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DepthFirstSearchTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, ProblemDetail } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -66,7 +66,16 @@ export async function createGraphTraversalTrace(
   }, signal) as Promise<GraphTraversalTrace>
 }
 
-async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphTraversalTrace> {
+export async function createDepthFirstSearchTrace(
+  graph: { nodes: string[]; edges: GraphEdge[]; startNode: string },
+  signal?: AbortSignal,
+): Promise<DepthFirstSearchTrace> {
+  return requestTrace('/api/v2/algorithms/dfs/trace', {
+    kind: 'GRAPH_TRAVERSAL', ...graph,
+  }, signal) as Promise<DepthFirstSearchTrace>
+}
+
+async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphAlgorithmTrace> {
   let response: Response
   try {
     response = await fetch(url, {
@@ -79,7 +88,7 @@ async function requestTrace(url: string, body: unknown, signal?: AbortSignal): P
   if (response.ok) {
     const trace = await response.json() as { apiVersion?: string }
     if (trace.apiVersion !== '2.0') throw new TraceRequestError(`Unsupported trace API version: ${trace.apiVersion ?? 'missing'}.`, 'unavailable')
-    return trace as AlgorithmTrace | GraphTraversalTrace
+    return trace as AlgorithmTrace | GraphAlgorithmTrace
   }
   const problem = await readProblem(response)
   if (response.status >= 400 && response.status < 500) throw new TraceRequestError(problem?.detail ?? 'Check the input and try again.', 'validation', problem)

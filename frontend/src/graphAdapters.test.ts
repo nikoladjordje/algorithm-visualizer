@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { breadthFirstAdapter as adapter } from './graphAdapters'
-import type { GraphTraversalEvent, GraphTraversalState, GraphTraversalTrace } from './types'
+import { breadthFirstAdapter as adapter, depthFirstAdapter } from './graphAdapters'
+import type { DepthFirstSearchEvent, DepthFirstSearchState, DepthFirstSearchTrace, GraphTraversalEvent, GraphTraversalState, GraphTraversalTrace } from './types'
 
 const state: GraphTraversalState = {
   kind: 'GRAPH_TRAVERSAL',
@@ -66,5 +66,55 @@ describe('BFS adapter', () => {
     ])
     expect(adapter.complete(result)).toBe('Breadth-first traversal is complete. Unreachable nodes: D.')
     expect(adapter.complete({ ...result, unreachableNodes: [] })).toBe('Breadth-first traversal is complete. Unreachable nodes: none.')
+  })
+})
+
+describe('DFS adapter', () => {
+  const dfsState: DepthFirstSearchState = {
+    kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'DISCOVERED' }, stack: ['A'],
+    traversalOrder: [], parents: {}, examinedEdge: null,
+  }
+  const dfsResult: DepthFirstSearchTrace['result'] = {
+    kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A'], parents: {}, unreachableNodes: [],
+    visitedNodeCount: 1, edgeExaminationCount: 0, maximumStackSize: 1,
+  }
+
+  it('submits DFS through its v2 trace route', async () => {
+    const trace = { apiVersion: '2.0', result: dfsResult, events: [] }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(trace))))
+    const signal = new AbortController().signal
+    const graph = { nodes: ['A'], edges: [], startNode: 'A' }
+    await expect(depthFirstAdapter.createTrace(graph, signal)).resolves.toEqual(trace)
+    expect(fetch).toHaveBeenCalledWith('/api/v2/algorithms/dfs/trace', expect.objectContaining({
+      signal, body: JSON.stringify({ kind: 'GRAPH_TRAVERSAL', ...graph }),
+    }))
+  })
+
+  it('presents a stack and every single-node event in plain language', () => {
+    const base = { sequence: 1, state: dfsState }
+    const events: DepthFirstSearchEvent[] = [
+      { ...base, type: 'TRAVERSAL_INITIALIZED', pseudocodeLineId: 'dfs-initialize', data: { kind: 'TRAVERSAL_INITIALIZED', startNode: 'A' } },
+      { ...base, type: 'NODE_POPPED', pseudocodeLineId: 'dfs-pop', data: { kind: 'NODE_POPPED', node: 'A' } },
+      { ...base, type: 'NODE_COMPLETED', pseudocodeLineId: 'dfs-complete-node', data: { kind: 'NODE_COMPLETED', node: 'A' } },
+      { ...base, type: 'TRAVERSAL_COMPLETED', pseudocodeLineId: 'dfs-complete-traversal', data: { kind: 'TRAVERSAL_COMPLETED', traversalOrder: ['A'], unreachableNodes: [] } },
+    ]
+    expect(events.map(event => depthFirstAdapter.explain(event))).toEqual([
+      'Discover and push A onto the stack.', 'Pop and visit A.',
+      'Finish A; it is now processed.', 'Traversal complete: A.',
+    ])
+    expect(events.map(event => event.pseudocodeLineId)).toEqual(depthFirstAdapter.pseudocode.map(line => line.id))
+    expect(depthFirstAdapter.present(['A'], dfsState).rows[0]).toEqual({ label: 'Stack (top first)', value: 'A' })
+    expect(depthFirstAdapter.present(['A'], dfsState).description).toContain('Stack (top first): A')
+  })
+
+  it('provides DFS metrics, complexity, and traversal-only result language', () => {
+    expect(depthFirstAdapter.metrics(dfsResult)).toEqual([
+      { label: 'visited', value: 1 }, { label: 'edges examined', value: 0 }, { label: 'max stack', value: 1 },
+    ])
+    expect(depthFirstAdapter.complete(dfsResult)).toBe('Depth-first traversal is complete. Unreachable nodes: none.')
+    expect(depthFirstAdapter.complexity).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: 'Time', value: 'O(V + E)' }),
+      expect.objectContaining({ label: 'Space', value: 'O(V)' }),
+    ]))
   })
 })
