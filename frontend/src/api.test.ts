@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createDepthFirstSearchTrace, createGraphTraversalTrace, createInsertionSortTrace } from './api'
+import { createDepthFirstSearchTrace, createDijkstraTrace, createGraphTraversalTrace, createInsertionSortTrace } from './api'
 import type { AlgorithmTrace, ProblemDetail } from './types'
 
 const trace: AlgorithmTrace = {
@@ -107,6 +107,25 @@ describe('createDepthFirstSearchTrace', () => {
       .resolves.toEqual(graphTrace)
     expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/dfs/trace', expect.objectContaining({
       body: JSON.stringify({ kind: 'GRAPH_TRAVERSAL', nodes: ['A'], edges: [], startNode: 'A' }),
+    }))
+  })
+})
+
+describe('createDijkstraTrace', () => {
+  it('submits a strongly typed pathfinding request', async () => {
+    const pathTrace = {
+      apiVersion: '2.0', algorithm: { id: 'dijkstra', name: "Dijkstra's Algorithm", family: 'PATHFINDING' },
+      input: { kind: 'PATHFINDING', nodes: ['A'], edges: [], startNode: 'A', destination: 'A' },
+      result: { kind: 'PATHFINDING', pathFound: true, path: ['A'], totalCost: 0, settledOrder: ['A'], parents: {}, settledNodeCount: 1, relaxationAttemptCount: 0, successfulUpdateCount: 0, rejectedUpdateCount: 0, maximumFrontierSize: 1 },
+      limits: { maximumEvents: 10000 }, events: [],
+    }
+    const fetchMock = vi.fn().mockResolvedValue(response(pathTrace, 200))
+    vi.stubGlobal('fetch', fetchMock)
+    const graph = { nodes: ['A'], edges: [], startNode: 'A', destination: 'A' }
+
+    await expect(createDijkstraTrace(graph)).resolves.toEqual(pathTrace)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/dijkstra/trace', expect.objectContaining({
+      body: JSON.stringify({ kind: 'PATHFINDING', ...graph }),
     }))
   })
 })

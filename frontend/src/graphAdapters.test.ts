@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { breadthFirstAdapter as adapter, depthFirstAdapter } from './graphAdapters'
-import type { DepthFirstSearchEvent, DepthFirstSearchState, DepthFirstSearchTrace, GraphTraversalEvent, GraphTraversalState, GraphTraversalTrace } from './types'
+import { breadthFirstAdapter as adapter, depthFirstAdapter, dijkstraAdapter } from './graphAdapters'
+import type { DepthFirstSearchEvent, DepthFirstSearchState, DepthFirstSearchTrace, GraphTraversalEvent, GraphTraversalState, GraphTraversalTrace, PathfindingEvent, PathfindingState, PathfindingTrace } from './types'
 
 const state: GraphTraversalState = {
   kind: 'GRAPH_TRAVERSAL',
@@ -169,5 +169,84 @@ describe('DFS adapter', () => {
     expect(depthFirstAdapter.presets.map(preset => preset.label))
       .toEqual(['Branching', 'Cycle', 'Disconnected'])
     expect(connectedState).toEqual(original)
+  })
+})
+
+describe('Dijkstra adapter', () => {
+  const pathState: PathfindingState = {
+    kind: 'PATHFINDING',
+    nodeStatuses: { A: 'SETTLED', C: 'ACTIVE', B: 'FRONTIER', D: 'UNREACHED' },
+    tentativeDistances: { A: 0, C: 1, B: 4, D: null },
+    parents: { C: 'A', B: 'A' },
+    frontier: [{ node: 'B', distance: 4 }],
+    examinedEdge: { from: 'C', to: 'B', weight: 2 },
+  }
+  const pathResult: PathfindingTrace['result'] = {
+    kind: 'PATHFINDING', pathFound: true, path: ['A', 'C', 'D'], totalCost: 3,
+    settledOrder: ['A', 'C', 'D'], parents: { C: 'A', B: 'A', D: 'C' },
+    settledNodeCount: 3, relaxationAttemptCount: 5, successfulUpdateCount: 4,
+    rejectedUpdateCount: 1, maximumFrontierSize: 2,
+  }
+
+  it('submits required destinations through the pathfinding route', async () => {
+    const trace = { apiVersion: '2.0', result: pathResult, events: [] }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(trace))))
+    const signal = new AbortController().signal
+    const graph = { nodes: ['A', 'B'], edges: [{ from: 'A', to: 'B', weight: 2 }], startNode: 'A', destination: 'B' }
+
+    await expect(dijkstraAdapter.createTrace(graph, signal)).resolves.toEqual(trace)
+    expect(fetch).toHaveBeenCalledWith('/api/v2/algorithms/dijkstra/trace', expect.objectContaining({
+      signal, body: JSON.stringify({ kind: 'PATHFINDING', ...graph }),
+    }))
+  })
+
+  it('explains every semantic event and aligns it with pseudocode', () => {
+    const base = { sequence: 1, state: pathState }
+    const events: PathfindingEvent[] = [
+      { ...base, type: 'PATHFINDING_INITIALIZED', pseudocodeLineId: 'dijkstra-initialize', data: { kind: 'PATHFINDING_INITIALIZED', startNode: 'A', destination: 'D' } },
+      { ...base, type: 'STALE_FRONTIER_ENTRY_SKIPPED', pseudocodeLineId: 'dijkstra-skip-stale', data: { kind: 'STALE_FRONTIER_ENTRY_SKIPPED', node: 'B', queuedDistance: 9, currentDistance: 4 } },
+      { ...base, type: 'NODE_SELECTED', pseudocodeLineId: 'dijkstra-select-node', data: { kind: 'NODE_SELECTED', node: 'C', distance: 1 } },
+      { ...base, type: 'NODE_SETTLED', pseudocodeLineId: 'dijkstra-settle-node', data: { kind: 'NODE_SETTLED', node: 'C', distance: 1 } },
+      { ...base, type: 'EDGE_EXAMINED', pseudocodeLineId: 'dijkstra-examine-edge', data: { kind: 'EDGE_EXAMINED', from: 'C', to: 'B', weight: 2, candidateCost: 3, currentKnownCost: 4 } },
+      { ...base, type: 'DISTANCE_UPDATED', pseudocodeLineId: 'dijkstra-update-distance', data: { kind: 'DISTANCE_UPDATED', node: 'B', parent: 'C', previousDistance: 4, newDistance: 3 } },
+      { ...base, type: 'RELAXATION_REJECTED', pseudocodeLineId: 'dijkstra-reject-relaxation', data: { kind: 'RELAXATION_REJECTED', from: 'C', to: 'B', weight: 3, candidateCost: 4, currentKnownCost: 4 } },
+      { ...base, type: 'PATH_RECONSTRUCTED', pseudocodeLineId: 'dijkstra-reconstruct-path', data: { kind: 'PATH_RECONSTRUCTED', destination: 'D', pathFound: true, path: ['A', 'C', 'D'], totalCost: 3 } },
+    ]
+
+    expect(events.map(event => event.pseudocodeLineId)).toEqual(dijkstraAdapter.pseudocode.map(line => line.id))
+    expect(events.map(event => dijkstraAdapter.explain(event))).toEqual([
+      "Set A's distance to 0 and search for D.",
+      'Discard stale B at cost 9; its current distance is 4.',
+      'Remove C, the smallest frontier distance at 1.',
+      'Settle C; its minimum cost is 1.',
+      'Examine C–B (cost 2): candidate 3, known 4.',
+      'Update B from 4 to 3 through C.',
+      'Reject cost 4 for B; known cost 4 is no worse.',
+      'Minimum-cost path reconstructed: A → C → D at total cost 3.',
+    ])
+  })
+
+  it('presents ordered frontier, distances, metrics, and the final path without mutation', () => {
+    const finalState: PathfindingState = { ...pathState, selectedPath: ['A', 'C', 'D'] }
+    const original = structuredClone(finalState)
+    const presentation = dijkstraAdapter.present(['A', 'C', 'B', 'D'], finalState, pathResult)
+
+    expect(presentation.rows.slice(0, 2)).toEqual([
+      { label: 'Priority frontier', value: 'B (4)' },
+      { label: 'Tentative distances', value: 'A: 0; C: 1; B: 4; D: ∞' },
+    ])
+    expect(presentation.selectedPathEdges).toEqual([{ from: 'A', to: 'C' }, { from: 'C', to: 'D' }])
+    expect(presentation.treeEdges).toEqual([{ from: 'C', to: 'A' }, { from: 'B', to: 'A' }])
+    expect(dijkstraAdapter.metrics(pathResult)).toEqual([
+      { label: 'settled', value: 3 }, { label: 'relaxations', value: 5 },
+      { label: 'updates', value: 4 }, { label: 'rejected', value: 1 },
+      { label: 'max frontier', value: 2 },
+    ])
+    expect(dijkstraAdapter.complete(pathResult)).toBe('Minimum-cost path found: A → C → D (total cost 3).')
+    expect(dijkstraAdapter.complete({ ...pathResult, pathFound: false, path: [], totalCost: undefined }))
+      .toBe('No path reaches the selected destination.')
+    expect(dijkstraAdapter.inputWarning([{ from: 'A', to: 'C' }]))
+      .toBe('Dijkstra treats every unweighted edge as cost 1.')
+    expect(finalState).toEqual(original)
   })
 })

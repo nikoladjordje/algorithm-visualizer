@@ -22,7 +22,7 @@ class AlgorithmControllerTests {
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$.length()").value(9))
                 .andExpect(jsonPath("$[0].id").value("insertion"))
                 .andExpect(jsonPath("$[1].id").value("selection"))
                 .andExpect(jsonPath("$[2].id").value("bubble"))
@@ -57,7 +57,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeBreadthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$.length()").value(9))
                 .andExpect(jsonPath("$[6].id").value("bfs"))
                 .andExpect(jsonPath("$[6].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[6].constraints.kind").value("GRAPH_TRAVERSAL"));
@@ -93,7 +93,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeIterativeDepthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(8))
+                .andExpect(jsonPath("$.length()").value(9))
                 .andExpect(jsonPath("$[7].id").value("dfs"))
                 .andExpect(jsonPath("$[7].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[7].constraints.kind").value("GRAPH_TRAVERSAL"))
@@ -266,6 +266,83 @@ class AlgorithmControllerTests {
     }
 
     @Test
+    void advertisesAndRunsDijkstraThroughThePathfindingContract() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[8].id").value("dijkstra"))
+                .andExpect(jsonPath("$[8].family").value("PATHFINDING"))
+                .andExpect(jsonPath("$[8].constraints.kind").value("PATHFINDING"))
+                .andExpect(jsonPath("$[8].constraints.weighted").value(true))
+                .andExpect(jsonPath("$[8].constraints.minimumWeight").value(1))
+                .andExpect(jsonPath("$[8].constraints.maximumWeight").value(99))
+                .andExpect(jsonPath("$[8].constraints.unweightedEdgeCost").value(1))
+                .andExpect(jsonPath("$[8].constraints.destinationRequired").value(true));
+
+        mockMvc.perform(post("/api/v2/algorithms/dijkstra/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"kind":"PATHFINDING","nodes":["A","B","C","D"],
+                                 "edges":[{"from":"A","to":"D","weight":9},
+                                          {"from":"A","to":"B","weight":2},
+                                          {"from":"B","to":"C"},
+                                          {"from":"C","to":"D","weight":2}],
+                                 "startNode":"A","destination":"D"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.algorithm.id").value("dijkstra"))
+                .andExpect(jsonPath("$.algorithm.family").value("PATHFINDING"))
+                .andExpect(jsonPath("$.input.kind").value("PATHFINDING"))
+                .andExpect(jsonPath("$.input.destination").value("D"))
+                .andExpect(jsonPath("$.input.edges[2].weight").doesNotExist())
+                .andExpect(jsonPath("$.result.kind").value("PATHFINDING"))
+                .andExpect(jsonPath("$.result.pathFound").value(true))
+                .andExpect(jsonPath("$.result.path[0]").value("A"))
+                .andExpect(jsonPath("$.result.path[1]").value("B"))
+                .andExpect(jsonPath("$.result.path[2]").value("C"))
+                .andExpect(jsonPath("$.result.path[3]").value("D"))
+                .andExpect(jsonPath("$.result.totalCost").value(5))
+                .andExpect(jsonPath("$.result.settledNodeCount").value(4))
+                .andExpect(jsonPath("$.result.relaxationAttemptCount").value(6))
+                .andExpect(jsonPath("$.events[0].type").value("PATHFINDING_INITIALIZED"))
+                .andExpect(jsonPath("$.events[0].state.tentativeDistances.A").value(0))
+                .andExpect(jsonPath("$.events[0].state.tentativeDistances.D").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.events[-1].type").value("PATH_RECONSTRUCTED"))
+                .andExpect(jsonPath("$.events[-1].state.selectedPath[3]").value("D"));
+    }
+
+    @Test
+    void validatesDijkstraDestinationAndFamilyWithoutChangingTraversalContracts() throws Exception {
+        String missingDestination = """
+                {"kind":"PATHFINDING","nodes":["A"],"edges":[],"startNode":"A"}
+                """;
+        mockMvc.perform(post("/api/v2/algorithms/dijkstra/trace")
+                        .contentType(MediaType.APPLICATION_JSON).content(missingDestination))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.field").value("destination"));
+
+        mockMvc.perform(post("/api/v2/algorithms/dijkstra/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(missingDestination.replace("}", ",\"destination\":\"Z\"}")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("destination"));
+
+        mockMvc.perform(post("/api/v2/algorithms/dijkstra/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\"],"
+                                + "\"edges\":[],\"startNode\":\"A\",\"destination\":\"A\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ALGORITHM_FAMILY_MISMATCH"));
+
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"PATHFINDING\",\"nodes\":[\"A\"],"
+                                + "\"edges\":[],\"startNode\":\"A\",\"destination\":\"A\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ALGORITHM_FAMILY_MISMATCH"));
+    }
+
+    @Test
     void rejectsInvalidGraphsWithProblemDetails() throws Exception {
         for (String body : java.util.List.of(
                 "{}",
@@ -321,6 +398,19 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.input.nodes.length()").value(12))
                 .andExpect(jsonPath("$.input.edges.length()").value(66))
                 .andExpect(jsonPath("$.events.length()").value(290))
+                .andExpect(jsonPath("$.limits.maximumEvents").value(10_000));
+
+        String maximumPathfinding = maximumGraph
+                .replace("\"GRAPH_TRAVERSAL\"", "\"PATHFINDING\"")
+                .replace("\"startNode\":\"N0\"}",
+                        "\"startNode\":\"N0\",\"destination\":\"N11\"}");
+        mockMvc.perform(post("/api/v2/algorithms/dijkstra/trace").contentType(MediaType.APPLICATION_JSON)
+                        .content(maximumPathfinding))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.nodes.length()").value(12))
+                .andExpect(jsonPath("$.input.edges.length()").value(66))
+                .andExpect(jsonPath("$.result.pathFound").value(true))
+                .andExpect(jsonPath("$.result.totalCost").value(1))
                 .andExpect(jsonPath("$.limits.maximumEvents").value(10_000));
 
         mockMvc.perform(post("/api/v2/algorithms/bfs/trace").contentType(MediaType.APPLICATION_JSON)

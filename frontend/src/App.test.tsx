@@ -6,7 +6,8 @@ const constraints={kind:'SORTING',minimumValues:1,maximumValues:50,minimumValue:
 const catalog=[{id:'insertion',name:'Insertion Sort',family:'SORTING',contractVersion:'2.0',constraints}]
 const graphCatalog={id:'bfs',name:'Breadth-First Search',family:'GRAPH_TRAVERSAL',contractVersion:'2.0',constraints:{kind:'GRAPH_TRAVERSAL',minimumNodes:1,maximumNodes:12,maximumEdges:66,nodeLabelPattern:'^[A-Za-z0-9_-]{1,16}$',directed:false,weighted:false}}
 const dfsCatalog={...graphCatalog,id:'dfs',name:'Depth-First Search',constraints:{...graphCatalog.constraints,maximumNodes:12,maximumEdges:66}}
-const fullCatalog=[...catalog,{id:'selection',name:'Selection Sort',family:'SORTING',contractVersion:'2.0',constraints},graphCatalog]
+const pathCatalog={id:'dijkstra',name:"Dijkstra's Algorithm",family:'PATHFINDING',contractVersion:'2.0',constraints:{kind:'PATHFINDING',minimumNodes:1,maximumNodes:12,maximumEdges:66,nodeLabelPattern:'^[A-Za-z0-9_-]{1,16}$',directed:false,weighted:true,minimumWeight:1,maximumWeight:99,unweightedEdgeCost:1,destinationRequired:true}}
+const fullCatalog=[...catalog,{id:'selection',name:'Selection Sort',family:'SORTING',contractVersion:'2.0',constraints},graphCatalog,pathCatalog]
 const trace={apiVersion:'2.0',algorithm:{id:'insertion',name:'Insertion Sort',family:'SORTING'},input:{kind:'SORTING',values:[2,1]},result:{kind:'SORTING',values:[1,2]},limits:{maximumEvents:10000},events:[{sequence:1,type:'MARK_SORTED',pseudocodeLineId:'complete-pass',state:{kind:'SORTING',items:[{id:1,value:1},{id:0,value:2}],sortedRanges:[{fromIndex:0,throughIndex:1}]},data:{kind:'MARK_SORTED',fromIndex:0,throughIndex:1}}]}
 beforeEach(()=>{history.replaceState(null,'','/');vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?catalog:trace),{status:200,headers:{'Content-Type':'application/json'}})))})
 afterEach(()=>vi.unstubAllGlobals())
@@ -27,7 +28,7 @@ describe('App algorithm workbench',()=>{
   render(<App />)
   if (retry) await userEvent.click(await screen.findByRole('button', { name: 'Retry catalog' }))
   await screen.findByRole('option', { name: 'Breadth-First Search' })
-  expect(within(screen.getByLabelText('Algorithm')).getAllByRole('option').map(option => option.textContent)).toEqual(['Insertion Sort', 'Selection Sort', 'Breadth-First Search', 'Depth-First Search'])
+  expect(within(screen.getByLabelText('Algorithm')).getAllByRole('option').map(option => option.textContent)).toEqual(['Insertion Sort', 'Selection Sort', 'Breadth-First Search', "Dijkstra's Algorithm", 'Depth-First Search'])
   expect(screen.getByLabelText('Algorithm')).toHaveValue('dfs')
  })
  it('submits mixed weights and keeps the BFS explanation visible during playback, reset, and draft changes', async () => {
@@ -125,6 +126,43 @@ describe('App algorithm workbench',()=>{
   expect(screen.getByLabelText('Destination')).toHaveValue('Y')
   fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'X-Z' } })
   expect(screen.getByLabelText('Destination')).toHaveValue('')
+ })
+
+ it('requires a Dijkstra destination and plays the complete minimum-cost path', async () => {
+  const pathTrace = {
+   apiVersion: '2.0', algorithm: { id: 'dijkstra', name: "Dijkstra's Algorithm", family: 'PATHFINDING' },
+   input: { kind: 'PATHFINDING', nodes: ['A', 'D', 'B', 'C'], edges: [{ from: 'A', to: 'D', weight: 9 }, { from: 'A', to: 'B', weight: 2 }, { from: 'B', to: 'C' }, { from: 'C', to: 'D', weight: 2 }], startNode: 'A', destination: 'D' },
+   result: { kind: 'PATHFINDING', pathFound: true, path: ['A', 'B', 'C', 'D'], totalCost: 5, settledOrder: ['A', 'B', 'C', 'D'], parents: { D: 'A', B: 'A', C: 'B' }, settledNodeCount: 4, relaxationAttemptCount: 6, successfulUpdateCount: 4, rejectedUpdateCount: 2, maximumFrontierSize: 2 },
+   limits: { maximumEvents: 10000 },
+   events: [{ sequence: 1, type: 'PATH_RECONSTRUCTED', pseudocodeLineId: 'dijkstra-reconstruct-path', state: { kind: 'PATHFINDING', nodeStatuses: { A: 'SETTLED', B: 'SETTLED', C: 'SETTLED', D: 'SETTLED' }, tentativeDistances: { A: 0, B: 2, C: 3, D: 5 }, parents: { D: 'C', B: 'A', C: 'B' }, frontier: [], examinedEdge: null, selectedPath: ['A', 'B', 'C', 'D'] }, data: { kind: 'PATH_RECONSTRUCTED', destination: 'D', pathFound: true, path: ['A', 'B', 'C', 'D'], totalCost: 5 } }],
+  }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+   void init
+   return new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? fullCatalog : pathTrace), {
+    headers: { 'Content-Type': 'application/json' },
+   })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  const { container } = render(<App />)
+  await screen.findByRole('option', { name: "Dijkstra's Algorithm" })
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'dijkstra')
+  fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-D:9\nA-B:2\nB-C\nC-D:2' } })
+  expect(screen.getByText('Dijkstra treats every unweighted edge as cost 1.')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+  expect(screen.getByRole('alert')).toHaveTextContent('Select a destination node.')
+  expect(fetchMock).toHaveBeenCalledOnce()
+  await user.selectOptions(screen.getByLabelText('Destination'), 'D')
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+
+  expect(await screen.findByRole('img', { name: /Dijkstra pathfinding graph/ })).toBeInTheDocument()
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual(pathTrace.input)
+  expect(screen.getByLabelText('Pathfinding metrics')).toHaveTextContent('4settled6relaxations4updates2rejected2max frontier')
+  expect(container.querySelector('.graph-edge--selected-path')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('Minimum-cost path found: A → B → C → D (total cost 5).')).toBeInTheDocument()
+  expect(screen.getByText('A: 0; D: 5; B: 2; C: 3')).toBeInTheDocument()
+  expect(container.querySelectorAll('.graph-edge--selected-path')).toHaveLength(3)
  })
 
  it('selects either family from the URL without encoding drafts',async()=>{history.replaceState(null,'','/?algorithm=bfs');vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}})));render(<App/>);await waitFor(()=>expect(screen.getByLabelText('Algorithm')).toHaveValue('bfs'));expect(screen.getByLabelText('Graph input')).toHaveValue('A');expect(location.search).toBe('?algorithm=bfs');expect(fetch).toHaveBeenCalledOnce()})

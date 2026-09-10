@@ -2,8 +2,8 @@ import { axe } from 'vitest-axe'
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { GraphVisualizer } from './GraphVisualizer'
-import { breadthFirstAdapter, depthFirstAdapter } from '../graphAdapters'
-import type { DepthFirstSearchState, DepthFirstSearchTrace, GraphTraversalState, GraphTraversalTrace } from '../types'
+import { breadthFirstAdapter, depthFirstAdapter, dijkstraAdapter } from '../graphAdapters'
+import type { DepthFirstSearchState, DepthFirstSearchTrace, GraphTraversalState, GraphTraversalTrace, PathfindingState, PathfindingTrace } from '../types'
 
 const nodes = ['A', 'B', 'C', 'D']
 const edges = [{ from: 'A', to: 'B' }, { from: 'B', to: 'C' }, { from: 'C', to: 'D' }]
@@ -113,6 +113,29 @@ describe('GraphVisualizer', () => {
     expect(container.querySelectorAll('.graph-edge--selected-path')).toHaveLength(2)
     expect(screen.getByText('Fewest-edge path')).toBeInTheDocument()
     expect(screen.getByText('A → B → C')).toBeInTheDocument()
+    expect((await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toHaveLength(0)
+  })
+
+  it('exposes Dijkstra frontier, distances, statuses, and minimum-cost path accessibly', async () => {
+    const pathState: PathfindingState = {
+      kind: 'PATHFINDING',
+      nodeStatuses: { A: 'SETTLED', B: 'SETTLED', C: 'SETTLED', D: 'SETTLED' },
+      tentativeDistances: { A: 0, B: 2, C: 3, D: 5 },
+      parents: { B: 'A', C: 'B', D: 'C' }, frontier: [], examinedEdge: null,
+      selectedPath: ['A', 'B', 'C', 'D'],
+    }
+    const pathResult: PathfindingTrace['result'] = {
+      kind: 'PATHFINDING', pathFound: true, path: ['A', 'B', 'C', 'D'], totalCost: 5,
+      settledOrder: ['A', 'B', 'C', 'D'], parents: pathState.parents, settledNodeCount: 4,
+      relaxationAttemptCount: 6, successfulUpdateCount: 4, rejectedUpdateCount: 2, maximumFrontierSize: 2,
+    }
+    const { container } = render(<GraphVisualizer nodes={nodes} edges={edges}
+      presentation={dijkstraAdapter.present(nodes, pathState, pathResult)} />)
+
+    expect(screen.getByRole('img')).toHaveAccessibleName(/Priority frontier: empty.*Tentative distances: A: 0, B: 2, C: 3, D: 5.*Minimum-cost path: A → B → C → D; total cost 5/)
+    expect(screen.getAllByRole('group', { name: /settled/ })).toHaveLength(4)
+    expect(screen.getByText('Total cost').nextSibling).toHaveTextContent('5')
+    expect(container.querySelectorAll('.graph-edge--selected-path')).toHaveLength(3)
     expect((await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toHaveLength(0)
   })
 })

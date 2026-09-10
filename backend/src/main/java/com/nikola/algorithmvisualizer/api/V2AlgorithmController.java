@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.nikola.algorithmvisualizer.algorithm.AlgorithmRegistry;
 import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
+import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.trace.CompareData;
 import com.nikola.algorithmvisualizer.trace.EventData;
@@ -38,16 +39,20 @@ import com.nikola.algorithmvisualizer.trace.TraceLimitExceededException;
 public class V2AlgorithmController {
     private static final String SORTING = "SORTING";
     private static final String GRAPH_TRAVERSAL = "GRAPH_TRAVERSAL";
+    private static final String PATHFINDING = "PATHFINDING";
     private static final int MAXIMUM_EVENTS = 10_000;
     private final AlgorithmRegistry registry;
     private final BreadthFirstSearchAlgorithm breadthFirstSearch;
     private final IterativeDepthFirstSearchAlgorithm depthFirstSearch;
+    private final DijkstraPathfindingAlgorithm dijkstraPathfinding;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
-            IterativeDepthFirstSearchAlgorithm depthFirstSearch) {
+            IterativeDepthFirstSearchAlgorithm depthFirstSearch,
+            DijkstraPathfindingAlgorithm dijkstraPathfinding) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
+        this.dijkstraPathfinding = dijkstraPathfinding;
     }
 
     @GetMapping
@@ -64,6 +69,9 @@ public class V2AlgorithmController {
         catalog.add(new V2Contracts.CatalogEntry("dfs", "Depth-First Search", GRAPH_TRAVERSAL, "2.0",
                 new V2Contracts.GraphTraversalConstraints(GRAPH_TRAVERSAL, 1, 12, 66,
                         "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99)));
+        catalog.add(new V2Contracts.CatalogEntry("dijkstra", "Dijkstra's Algorithm", PATHFINDING, "2.0",
+                new V2Contracts.PathfindingConstraints(PATHFINDING, 1, 12, 66,
+                        "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99, 1, true)));
         return List.copyOf(catalog);
     }
 
@@ -115,6 +123,29 @@ public class V2AlgorithmController {
                     new V2Contracts.GraphTraversalInput(GRAPH_TRAVERSAL, request.nodes(), request.edges(),
                             request.startNode(), null),
                     graphTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), graphTrace.events());
+        }
+        if ("dijkstra".equals(algorithmId)) {
+            if (!PATHFINDING.equals(request.kind())) {
+                throw new AlgorithmFamilyMismatchException(algorithmId, PATHFINDING);
+            }
+            validateGraph(request);
+            if (request.destination() == null || !request.nodes().contains(request.destination())) {
+                throw new GraphValidationException("destination", "Select a declared destination node");
+            }
+            var edges = request.edges().stream()
+                    .map(edge -> new DijkstraPathfindingAlgorithm.Edge(edge.from(), edge.to(),
+                            edge.weight() == null ? 1 : edge.weight()))
+                    .toList();
+            var pathTrace = dijkstraPathfinding.execute(request.nodes(), edges, request.startNode(),
+                    request.destination());
+            if (pathTrace.events().size() > MAXIMUM_EVENTS) {
+                throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            }
+            return new V2Contracts.PathfindingTrace("2.0",
+                    new V2Contracts.AlgorithmInfo("dijkstra", "Dijkstra's Algorithm", PATHFINDING),
+                    new V2Contracts.PathfindingInput(PATHFINDING, request.nodes(), request.edges(),
+                            request.startNode(), request.destination()),
+                    pathTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), pathTrace.events());
         }
         var algorithm = registry.require(algorithmId);
         if (!SORTING.equals(request.kind())) {

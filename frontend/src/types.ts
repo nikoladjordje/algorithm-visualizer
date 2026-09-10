@@ -154,9 +154,58 @@ export interface DepthFirstSearchTrace {
   limits: { maximumEvents: number }
   events: DepthFirstSearchEvent[]
 }
-export type GraphAlgorithmTrace = GraphTraversalTrace | DepthFirstSearchTrace
-export type GraphAlgorithmState = GraphTraversalState | DepthFirstSearchState
-export type GraphAlgorithmEvent = GraphTraversalEvent | DepthFirstSearchEvent
+export type PathfindingNodeStatus = 'UNREACHED' | 'FRONTIER' | 'ACTIVE' | 'SETTLED'
+export interface PathfindingState {
+  kind: 'PATHFINDING'
+  nodeStatuses: Record<string, PathfindingNodeStatus>
+  tentativeDistances: Record<string, number | null>
+  parents: Record<string, string>
+  frontier: { node: string; distance: number }[]
+  examinedEdge: GraphEdge | null
+  selectedPath?: string[]
+}
+interface PathfindingEventDataByType {
+  PATHFINDING_INITIALIZED: { kind: 'PATHFINDING_INITIALIZED'; startNode: string; destination: string }
+  NODE_SELECTED: { kind: 'NODE_SELECTED'; node: string; distance: number }
+  NODE_SETTLED: { kind: 'NODE_SETTLED'; node: string; distance: number }
+  EDGE_EXAMINED: { kind: 'EDGE_EXAMINED'; from: string; to: string; weight: number; candidateCost: number; currentKnownCost?: number }
+  DISTANCE_UPDATED: { kind: 'DISTANCE_UPDATED'; node: string; parent: string; previousDistance?: number; newDistance: number }
+  RELAXATION_REJECTED: { kind: 'RELAXATION_REJECTED'; from: string; to: string; weight: number; candidateCost: number; currentKnownCost?: number }
+  STALE_FRONTIER_ENTRY_SKIPPED: { kind: 'STALE_FRONTIER_ENTRY_SKIPPED'; node: string; queuedDistance: number; currentDistance?: number }
+  PATH_RECONSTRUCTED: { kind: 'PATH_RECONSTRUCTED'; destination: string; pathFound: boolean; path: string[]; totalCost?: number }
+}
+export type PathfindingEvent = {
+  [Type in keyof PathfindingEventDataByType]: {
+    sequence: number
+    type: Type
+    pseudocodeLineId: string
+    state: PathfindingState
+    data: PathfindingEventDataByType[Type]
+  }
+}[keyof PathfindingEventDataByType]
+export interface PathfindingTrace {
+  apiVersion: '2.0'
+  algorithm: { id: 'dijkstra'; name: "Dijkstra's Algorithm"; family: 'PATHFINDING' }
+  input: { kind: 'PATHFINDING'; nodes: string[]; edges: GraphEdge[]; startNode: string; destination: string }
+  result: {
+    kind: 'PATHFINDING'
+    pathFound: boolean
+    path: string[]
+    totalCost?: number
+    settledOrder: string[]
+    parents: Record<string, string>
+    settledNodeCount: number
+    relaxationAttemptCount: number
+    successfulUpdateCount: number
+    rejectedUpdateCount: number
+    maximumFrontierSize: number
+  }
+  limits: { maximumEvents: number }
+  events: PathfindingEvent[]
+}
+export type GraphAlgorithmTrace = GraphTraversalTrace | DepthFirstSearchTrace | PathfindingTrace
+export type GraphAlgorithmState = GraphTraversalState | DepthFirstSearchState | PathfindingState
+export type GraphAlgorithmEvent = GraphTraversalEvent | DepthFirstSearchEvent | PathfindingEvent
 export type GraphAlgorithmResult = GraphAlgorithmTrace['result']
 export interface GraphAlgorithmCatalogEntry {
   id: string
@@ -175,7 +224,26 @@ export interface GraphAlgorithmCatalogEntry {
     maximumWeight?: number
   }
 }
-export type AlgorithmCatalogEntry = SortingAlgorithmCatalogEntry | GraphAlgorithmCatalogEntry
+export interface PathfindingCatalogEntry {
+  id: string
+  name: string
+  family: 'PATHFINDING'
+  contractVersion: '2.0'
+  constraints: {
+    kind: 'PATHFINDING'
+    minimumNodes: number
+    maximumNodes: number
+    maximumEdges: number
+    nodeLabelPattern: string
+    directed: false
+    weighted: true
+    minimumWeight: number
+    maximumWeight: number
+    unweightedEdgeCost: 1
+    destinationRequired: true
+  }
+}
+export type AlgorithmCatalogEntry = SortingAlgorithmCatalogEntry | GraphAlgorithmCatalogEntry | PathfindingCatalogEntry
 export type VisualizerTrace = AlgorithmTrace | GraphAlgorithmTrace
 
 export type MetricType = 'COMPARISONS' | 'READS' | 'WRITES' | 'SWAPS'

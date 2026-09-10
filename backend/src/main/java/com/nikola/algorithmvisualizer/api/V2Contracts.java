@@ -17,7 +17,8 @@ final class V2Contracts {
             Constraints constraints) {
     }
 
-    sealed interface Constraints permits SortingConstraints, GraphTraversalConstraints {
+    sealed interface Constraints permits SortingConstraints, GraphTraversalConstraints,
+            PathfindingConstraints {
         String kind();
     }
 
@@ -28,6 +29,11 @@ final class V2Contracts {
             int maximumEdges, String nodeLabelPattern, boolean directed, boolean weighted,
             int minimumWeight, int maximumWeight)
             implements Constraints { }
+
+    record PathfindingConstraints(String kind, int minimumNodes, int maximumNodes,
+            int maximumEdges, String nodeLabelPattern, boolean directed, boolean weighted,
+            int minimumWeight, int maximumWeight, int unweightedEdgeCost,
+            boolean destinationRequired) implements Constraints { }
 
     record AlgorithmInfo(String id, String name, String family) {
     }
@@ -56,6 +62,14 @@ final class V2Contracts {
         }
     }
 
+    record PathfindingInput(String kind, List<String> nodes, List<GraphEdge> edges,
+            String startNode, String destination) {
+        PathfindingInput {
+            nodes = List.copyOf(nodes);
+            edges = List.copyOf(edges);
+        }
+    }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record GraphEdge(String from, String to,
             @JsonDeserialize(using = EdgeWeightDeserializer.class) Integer weight) { }
@@ -73,6 +87,14 @@ final class V2Contracts {
             Limits limits,
             List<com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm.Event> events) {
         DepthFirstSearchTrace { events = List.copyOf(events); }
+    }
+
+    record PathfindingTrace(String apiVersion, AlgorithmInfo algorithm,
+            PathfindingInput input,
+            com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm.Result result,
+            Limits limits,
+            List<com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm.Event> events) {
+        PathfindingTrace { events = List.copyOf(events); }
     }
 
     record SortingState(String kind, List<TraceItem> items, List<SortedRange> sortedRanges) {

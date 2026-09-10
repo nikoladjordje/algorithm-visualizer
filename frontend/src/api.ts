@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, DepthFirstSearchTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, ProblemDetail } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DepthFirstSearchTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, PathfindingTrace, ProblemDetail } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -73,6 +73,15 @@ export async function createDepthFirstSearchTrace(
   return requestTrace('/api/v2/algorithms/dfs/trace', {
     kind: 'GRAPH_TRAVERSAL', ...graph,
   }, signal) as Promise<DepthFirstSearchTrace>
+}
+
+export async function createDijkstraTrace(
+  graph: { nodes: string[]; edges: GraphEdge[]; startNode: string; destination: string },
+  signal?: AbortSignal,
+): Promise<PathfindingTrace> {
+  return requestTrace('/api/v2/algorithms/dijkstra/trace', {
+    kind: 'PATHFINDING', ...graph,
+  }, signal) as Promise<PathfindingTrace>
 }
 
 async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphAlgorithmTrace> {

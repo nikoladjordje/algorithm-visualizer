@@ -7,6 +7,7 @@ import type { AlgorithmCatalogEntry } from './types'
 export type AlgorithmCapability =
   | { family: 'SORTING'; adapter: AlgorithmAdapter }
   | { family: 'GRAPH_TRAVERSAL'; adapter: GraphAlgorithmAdapter }
+  | { family: 'PATHFINDING'; adapter: GraphAlgorithmAdapter }
 
 export function resolveAlgorithmAdapter(entry?: AlgorithmCatalogEntry): AlgorithmCapability | undefined {
   if (!entry || entry.contractVersion !== '2.0') return undefined
