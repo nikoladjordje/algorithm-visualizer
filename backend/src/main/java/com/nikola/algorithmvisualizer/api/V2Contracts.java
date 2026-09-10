@@ -47,8 +47,9 @@ final class V2Contracts {
     record Limits(int maximumEvents) {
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     record GraphTraversalInput(String kind, List<String> nodes, List<GraphEdge> edges,
-            String startNode) {
+            String startNode, String destination) {
         GraphTraversalInput {
             nodes = List.copyOf(nodes);
             edges = List.copyOf(edges);

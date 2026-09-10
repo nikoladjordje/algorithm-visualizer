@@ -81,14 +81,18 @@ public class V2AlgorithmController {
             var edges = request.edges().stream()
                     .map(edge -> new BreadthFirstSearchAlgorithm.Edge(edge.from(), edge.to()))
                     .toList();
-            var graphTrace = breadthFirstSearch.execute(request.nodes(), edges, request.startNode());
+            if (request.destination() != null && !request.nodes().contains(request.destination())) {
+                throw new GraphValidationException("destination", "Select a declared destination node");
+            }
+            var graphTrace = breadthFirstSearch.execute(request.nodes(), edges, request.startNode(),
+                    request.destination());
             if (graphTrace.events().size() > MAXIMUM_EVENTS) {
                 throw new TraceLimitExceededException(MAXIMUM_EVENTS);
             }
             return new V2Contracts.GraphTraversalTrace("2.0",
                     new V2Contracts.AlgorithmInfo("bfs", "Breadth-First Search", GRAPH_TRAVERSAL),
                     new V2Contracts.GraphTraversalInput(GRAPH_TRAVERSAL, request.nodes(), request.edges(),
-                            request.startNode()),
+                            request.startNode(), request.destination()),
                     graphTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), graphTrace.events());
         }
         if ("dfs".equals(algorithmId)) {
@@ -96,6 +100,9 @@ public class V2AlgorithmController {
                 throw new AlgorithmFamilyMismatchException(algorithmId, GRAPH_TRAVERSAL);
             }
             validateGraph(request);
+            if (request.destination() != null) {
+                throw new GraphValidationException("destination", "Depth-first search does not accept a destination");
+            }
             var edges = request.edges().stream()
                     .map(edge -> new IterativeDepthFirstSearchAlgorithm.Edge(edge.from(), edge.to()))
                     .toList();
@@ -106,7 +113,7 @@ public class V2AlgorithmController {
             return new V2Contracts.DepthFirstSearchTrace("2.0",
                     new V2Contracts.AlgorithmInfo("dfs", "Depth-First Search", GRAPH_TRAVERSAL),
                     new V2Contracts.GraphTraversalInput(GRAPH_TRAVERSAL, request.nodes(), request.edges(),
-                            request.startNode()),
+                            request.startNode(), null),
                     graphTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), graphTrace.events());
         }
         var algorithm = registry.require(algorithmId);
@@ -214,5 +221,5 @@ public class V2AlgorithmController {
     }
 
     public record V2Request(String kind, List<Integer> values, List<String> nodes,
-            List<V2Contracts.GraphEdge> edges, String startNode) { }
+            List<V2Contracts.GraphEdge> edges, String startNode, String destination) { }
 }

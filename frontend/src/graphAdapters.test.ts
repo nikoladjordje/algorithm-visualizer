@@ -29,7 +29,7 @@ describe('BFS adapter', () => {
 
   it('preserves queue order, graph annotations, and complete accessible state without mutating snapshots', () => {
     const original = structuredClone(state)
-    const presentation = adapter.present(['A', 'B', 'C', 'D'], state, ['D'])
+    const presentation = adapter.present(['A', 'B', 'C', 'D'], state, result)
     expect(presentation.description).toBe('A: processed, B: active, C: discovered, D: unreached. Queue: C. Traversal order: A, B. Examined edge: B–C. Parents: B from A, C from B. Unreachable nodes: D.')
     expect(presentation.treeEdges).toEqual([{ from: 'B', to: 'A' }, { from: 'C', to: 'B' }])
     expect(presentation.examinedEdge).toEqual({ from: 'B', to: 'C' })
@@ -51,11 +51,13 @@ describe('BFS adapter', () => {
       { ...base, type: 'ALREADY_DISCOVERED_SKIPPED', pseudocodeLineId: 'bfs-skip-neighbor', data: { kind: 'ALREADY_DISCOVERED_SKIPPED', from: 'B', to: 'A' } },
       { ...base, type: 'NODE_COMPLETED', pseudocodeLineId: 'bfs-complete-node', data: { kind: 'NODE_COMPLETED', node: 'A' } },
       { ...base, type: 'TRAVERSAL_COMPLETED', pseudocodeLineId: 'bfs-complete-traversal', data: { kind: 'TRAVERSAL_COMPLETED', traversalOrder: ['A', 'B'], unreachableNodes: [] } },
+      { ...base, type: 'PATH_RECONSTRUCTED', pseudocodeLineId: 'bfs-reconstruct-path', data: { kind: 'PATH_RECONSTRUCTED', destination: 'B', pathFound: true, path: ['A', 'B'], pathEdgeCount: 1 } },
     ]
     expect(events.map(event => adapter.explain(event))).toEqual([
       'Discover and enqueue A.', 'Dequeue and visit A.', 'Examine edge A–B.',
       'Discover B from A and enqueue it.', 'Skip A; it was already discovered.',
       'Finish A; all of its neighbors were examined.', 'Traversal complete: A, B.',
+      'Fewest-edge path reconstructed: A → B.',
     ])
     expect(events.map(event => event.pseudocodeLineId)).toEqual(adapter.pseudocode.map(line => line.id))
   })
@@ -66,6 +68,29 @@ describe('BFS adapter', () => {
     ])
     expect(adapter.complete(result)).toBe('Breadth-first traversal is complete. Unreachable nodes: D.')
     expect(adapter.complete({ ...result, unreachableNodes: [] })).toBe('Breadth-first traversal is complete. Unreachable nodes: none.')
+  })
+
+  it('presents a reconstructed path separately from the search tree and unexplored nodes', () => {
+    const targetedState: GraphTraversalState = { ...state, selectedPath: ['A', 'B', 'C'] }
+    const targetedResult: GraphTraversalTrace['result'] = {
+      ...result,
+      unreachableNodes: [],
+      pathFound: true,
+      path: ['A', 'B', 'C'],
+      pathEdgeCount: 2,
+      unexploredNodes: ['D'],
+    }
+    const presentation = adapter.present(['A', 'B', 'C', 'D'], targetedState, targetedResult)
+
+    expect(presentation.selectedPathEdges).toEqual([{ from: 'A', to: 'B' }, { from: 'B', to: 'C' }])
+    expect(presentation.rows).toEqual(expect.arrayContaining([
+      { label: 'Fewest-edge path', value: 'A → B → C' },
+      { label: 'Unexplored nodes', value: 'D' },
+    ]))
+    expect(presentation.description).toContain('Fewest-edge path: A → B → C.')
+    expect(adapter.complete(targetedResult)).toBe('Fewest-edge path found: A → B → C (2 edges).')
+    expect(adapter.complete({ ...targetedResult, pathFound: false, path: [], pathEdgeCount: undefined }))
+      .toBe('No path reaches the selected destination.')
   })
 })
 
@@ -130,7 +155,7 @@ describe('DFS adapter', () => {
       examinedEdge: { from: 'A', to: 'C' },
     }
     const original = structuredClone(connectedState)
-    const presentation = depthFirstAdapter.present(['A', 'C', 'B', 'Z'], connectedState, ['Z'])
+    const presentation = depthFirstAdapter.present(['A', 'C', 'B', 'Z'], connectedState, { ...dfsResult, unreachableNodes: ['Z'] })
 
     expect(presentation.rows.slice(0, 2)).toEqual([
       { label: 'Stack (top first)', value: 'C → B' },

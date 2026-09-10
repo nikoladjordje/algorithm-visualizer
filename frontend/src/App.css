@@ -72,6 +72,7 @@ h2 { margin: 5px 0 7px; color: var(--ink); font-size: 25px; letter-spacing: -.03
 .graph-edge { stroke: #89908b; stroke-width: 2; }
 .graph-edge--tree { stroke: var(--green); stroke-width: 5; }
 .graph-edge--examined { stroke: var(--orange); stroke-width: 7; stroke-dasharray: 12 6; }
+.graph-edge--selected-path { stroke: #5d3f8c; stroke-width: 8; stroke-dasharray: 3 5; }
 .graph-visualizer .graph-status { fill: var(--muted); font-size: 11px; text-transform: uppercase; }
 .graph-visualizer .graph-status-symbol { font-size: 18px; }
 .graph-node { stroke-width: 5; transition: fill .18s, stroke .18s; }

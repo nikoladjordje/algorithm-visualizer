@@ -68,15 +68,20 @@ class AlgorithmControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.algorithm.family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$.input.kind").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$.input.destination").doesNotExist())
                 .andExpect(jsonPath("$.result.traversalOrder[0]").value("A"))
                 .andExpect(jsonPath("$.result.parents").isEmpty())
                 .andExpect(jsonPath("$.result.unreachableNodes").isEmpty())
                 .andExpect(jsonPath("$.result.visitedNodeCount").value(1))
                 .andExpect(jsonPath("$.result.edgeExaminationCount").value(0))
                 .andExpect(jsonPath("$.result.maximumQueueSize").value(1))
+                .andExpect(jsonPath("$.result.pathFound").doesNotExist())
+                .andExpect(jsonPath("$.result.path").doesNotExist())
+                .andExpect(jsonPath("$.result.unexploredNodes").doesNotExist())
                 .andExpect(jsonPath("$.events.length()").value(4))
                 .andExpect(jsonPath("$.events[0].type").value("TRAVERSAL_INITIALIZED"))
                 .andExpect(jsonPath("$.events[0].state.nodeStatuses.A").value("DISCOVERED"))
+                .andExpect(jsonPath("$.events[0].state.selectedPath").doesNotExist())
                 .andExpect(jsonPath("$.events[1].type").value("NODE_DEQUEUED"))
                 .andExpect(jsonPath("$.events[1].state.nodeStatuses.A").value("ACTIVE"))
                 .andExpect(jsonPath("$.events[2].type").value("NODE_COMPLETED"))
@@ -179,6 +184,85 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.events[2].state.examinedEdge.to").value("C"))
                 .andExpect(jsonPath("$.events[3].type").value("NODE_DISCOVERED"))
                 .andExpect(jsonPath("$.events[3].data.parent").value("A"));
+    }
+
+    @Test
+    void findsAFewestEdgePathAndStopsWhenTheDestinationIsDequeued() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"kind":"GRAPH_TRAVERSAL","nodes":["A","B","C","D","E"],
+                                 "edges":[{"from":"A","to":"B","weight":99},
+                                          {"from":"A","to":"C"},{"from":"B","to":"D"},
+                                          {"from":"C","to":"E"}],
+                                 "startNode":"A","destination":"B"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.destination").value("B"))
+                .andExpect(jsonPath("$.result.pathFound").value(true))
+                .andExpect(jsonPath("$.result.path[0]").value("A"))
+                .andExpect(jsonPath("$.result.path[1]").value("B"))
+                .andExpect(jsonPath("$.result.pathEdgeCount").value(1))
+                .andExpect(jsonPath("$.result.unreachableNodes").isEmpty())
+                .andExpect(jsonPath("$.result.unexploredNodes[0]").value("C"))
+                .andExpect(jsonPath("$.result.unexploredNodes[1]").value("D"))
+                .andExpect(jsonPath("$.result.unexploredNodes[2]").value("E"))
+                .andExpect(jsonPath("$.result.visitedNodeCount").value(2))
+                .andExpect(jsonPath("$.result.edgeExaminationCount").value(2))
+                .andExpect(jsonPath("$.events[-1].type").value("PATH_RECONSTRUCTED"))
+                .andExpect(jsonPath("$.events[-1].pseudocodeLineId").value("bfs-reconstruct-path"))
+                .andExpect(jsonPath("$.events[-1].state.selectedPath[0]").value("A"))
+                .andExpect(jsonPath("$.events[-1].state.selectedPath[1]").value("B"))
+                .andExpect(jsonPath("$.events[-1].data.pathFound").value(true));
+    }
+
+    @Test
+    void reportsValidTargetedBoundaryAndNoPathOutcomes() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"kind":"GRAPH_TRAVERSAL","nodes":["A","B"],
+                                 "edges":[{"from":"A","to":"B"}],
+                                 "startNode":"A","destination":"A"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.pathFound").value(true))
+                .andExpect(jsonPath("$.result.path[0]").value("A"))
+                .andExpect(jsonPath("$.result.pathEdgeCount").value(0))
+                .andExpect(jsonPath("$.result.edgeExaminationCount").value(0))
+                .andExpect(jsonPath("$.events.length()").value(3));
+
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"kind":"GRAPH_TRAVERSAL","nodes":["A","B","Z"],
+                                 "edges":[{"from":"A","to":"B"}],
+                                 "startNode":"A","destination":"Z"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.pathFound").value(false))
+                .andExpect(jsonPath("$.result.path").isEmpty())
+                .andExpect(jsonPath("$.result.pathEdgeCount").doesNotExist())
+                .andExpect(jsonPath("$.result.unreachableNodes[0]").value("Z"))
+                .andExpect(jsonPath("$.result.unexploredNodes").isEmpty())
+                .andExpect(jsonPath("$.events[-1].type").value("PATH_RECONSTRUCTED"))
+                .andExpect(jsonPath("$.events[-1].data.pathFound").value(false));
+    }
+
+    @Test
+    void validatesDestinationsAndRejectsThemForDepthFirstSearch() throws Exception {
+        String body = "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\"],\"edges\":[],"
+                + "\"startNode\":\"A\",\"destination\":\"Z\"}";
+        mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("destination"));
+
+        mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("\"Z\"", "\"A\"")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("destination"));
     }
 
     @Test

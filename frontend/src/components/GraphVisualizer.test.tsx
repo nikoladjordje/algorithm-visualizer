@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { GraphVisualizer } from './GraphVisualizer'
 import { breadthFirstAdapter, depthFirstAdapter } from '../graphAdapters'
-import type { DepthFirstSearchState, GraphTraversalState } from '../types'
+import type { DepthFirstSearchState, DepthFirstSearchTrace, GraphTraversalState, GraphTraversalTrace } from '../types'
 
 const nodes = ['A', 'B', 'C', 'D']
 const edges = [{ from: 'A', to: 'B' }, { from: 'B', to: 'C' }, { from: 'C', to: 'D' }]
@@ -12,6 +12,10 @@ const state: GraphTraversalState = {
   nodeStatuses: { A: 'PROCESSED', B: 'ACTIVE', C: 'DISCOVERED', D: 'UNREACHED' },
   queue: ['C'], traversalOrder: ['A', 'B'], parents: { B: 'A', C: 'B' },
   examinedEdge: { from: 'B', to: 'C' },
+}
+const result: GraphTraversalTrace['result'] = {
+  kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A', 'B', 'C'], parents: { B: 'A', C: 'B' },
+  unreachableNodes: ['D'], visitedNodeCount: 3, edgeExaminationCount: 4, maximumQueueSize: 1,
 }
 
 describe('GraphVisualizer', () => {
@@ -24,7 +28,7 @@ describe('GraphVisualizer', () => {
     expect(screen.getByRole('group', { name: 'B–C, weight 99' })).toHaveTextContent('99')
     expect(container.querySelectorAll('.graph-weight')).toHaveLength(2)
     const badgePositions = [...container.querySelectorAll('.graph-weight rect')].map(rect => [rect.getAttribute('x'), rect.getAttribute('y')])
-    rerender(<GraphVisualizer nodes={nodes} edges={mixedEdges} presentation={breadthFirstAdapter.present(nodes, state, ['D'])} />)
+    rerender(<GraphVisualizer nodes={nodes} edges={mixedEdges} presentation={breadthFirstAdapter.present(nodes, state, result)} />)
     expect(container.querySelectorAll('.graph-edge--tree')).toHaveLength(1)
     expect(container.querySelectorAll('.graph-edge--examined')).toHaveLength(1)
     expect([...container.querySelectorAll('.graph-weight rect')].map(rect => [rect.getAttribute('x'), rect.getAttribute('y')])).toEqual(badgePositions)
@@ -67,7 +71,7 @@ describe('GraphVisualizer', () => {
   })
 
   it('provides complete textual state including unreachable completion', () => {
-    render(<GraphVisualizer nodes={nodes} edges={edges} presentation={breadthFirstAdapter.present(nodes, state, ['D'])} />)
+    render(<GraphVisualizer nodes={nodes} edges={edges} presentation={breadthFirstAdapter.present(nodes, state, result)} />)
     expect(screen.getByText('C', { selector: 'dd' })).toBeInTheDocument()
     expect(screen.getByText('A → B')).toBeInTheDocument()
     expect(screen.getByText('A: processed; B: active; C: discovered; D: unreached')).toBeInTheDocument()
@@ -83,14 +87,32 @@ describe('GraphVisualizer', () => {
       stack: ['C'], traversalOrder: ['A', 'B'], parents: { B: 'A', C: 'B' },
       examinedEdge: { from: 'B', to: 'C' },
     }
+    const dfsResult: DepthFirstSearchTrace['result'] = {
+      kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A', 'B', 'C'], parents: { B: 'A', C: 'B' },
+      unreachableNodes: ['D'], visitedNodeCount: 3, edgeExaminationCount: 4, maximumStackSize: 2,
+    }
     const mixedEdges = [{ from: 'A', to: 'B', weight: 9 }, ...edges.slice(1)]
     const { container } = render(<GraphVisualizer nodes={nodes} edges={mixedEdges}
-      presentation={depthFirstAdapter.present(nodes, dfsState, ['D'])} />)
+      presentation={depthFirstAdapter.present(nodes, dfsState, dfsResult)} />)
 
     expect(screen.getByRole('img')).toHaveAccessibleName(/Stack \(top first\): C.*Unreachable nodes: D/)
     expect(screen.getByText('Stack (top first)')).toBeInTheDocument()
     expect(screen.getByText('C', { selector: 'dd' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'A–B, weight 9' })).toBeInTheDocument()
+    expect((await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toHaveLength(0)
+  })
+
+  it('distinguishes the selected path from other search-tree edges without relying on color', async () => {
+    const selectedState: GraphTraversalState = { ...state, selectedPath: ['A', 'B', 'C'] }
+    const targetedResult: GraphTraversalTrace['result'] = {
+      ...result, unreachableNodes: [], pathFound: true, path: ['A', 'B', 'C'], pathEdgeCount: 2, unexploredNodes: ['D'],
+    }
+    const { container } = render(<GraphVisualizer nodes={nodes} edges={edges}
+      presentation={breadthFirstAdapter.present(nodes, selectedState, targetedResult)} />)
+
+    expect(container.querySelectorAll('.graph-edge--selected-path')).toHaveLength(2)
+    expect(screen.getByText('Fewest-edge path')).toBeInTheDocument()
+    expect(screen.getByText('A → B → C')).toBeInTheDocument()
     expect((await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toHaveLength(0)
   })
 })

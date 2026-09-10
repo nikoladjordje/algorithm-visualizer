@@ -71,6 +71,7 @@ export interface GraphTraversalState {
   traversalOrder: string[]
   parents: Record<string, string>
   examinedEdge: GraphEdge | null
+  selectedPath?: string[]
 }
 interface GraphEventDataByType {
   TRAVERSAL_INITIALIZED: { kind: 'TRAVERSAL_INITIALIZED'; startNode: string }
@@ -80,6 +81,7 @@ interface GraphEventDataByType {
   ALREADY_DISCOVERED_SKIPPED: { kind: 'ALREADY_DISCOVERED_SKIPPED'; from: string; to: string }
   NODE_COMPLETED: { kind: 'NODE_COMPLETED'; node: string }
   TRAVERSAL_COMPLETED: { kind: 'TRAVERSAL_COMPLETED'; traversalOrder: string[]; unreachableNodes: string[] }
+  PATH_RECONSTRUCTED: { kind: 'PATH_RECONSTRUCTED'; destination: string; pathFound: boolean; path: string[]; pathEdgeCount?: number }
 }
 export type GraphTraversalEvent = {
   [Type in keyof GraphEventDataByType]: {
@@ -93,7 +95,7 @@ export type GraphTraversalEvent = {
 export interface GraphTraversalTrace {
   apiVersion: '2.0'
   algorithm: { id: 'bfs'; name: 'Breadth-First Search'; family: 'GRAPH_TRAVERSAL' }
-  input: { kind: 'GRAPH_TRAVERSAL'; nodes: string[]; edges: GraphEdge[]; startNode: string }
+  input: { kind: 'GRAPH_TRAVERSAL'; nodes: string[]; edges: GraphEdge[]; startNode: string; destination?: string }
   result: {
     kind: 'GRAPH_TRAVERSAL'
     traversalOrder: string[]
@@ -102,6 +104,10 @@ export interface GraphTraversalTrace {
     visitedNodeCount: number
     edgeExaminationCount: number
     maximumQueueSize: number
+    pathFound?: boolean
+    path?: string[]
+    pathEdgeCount?: number
+    unexploredNodes?: string[]
   }
   limits: { maximumEvents: number }
   events: GraphTraversalEvent[]

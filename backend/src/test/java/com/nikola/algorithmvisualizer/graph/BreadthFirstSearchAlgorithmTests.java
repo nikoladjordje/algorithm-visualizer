@@ -82,4 +82,75 @@ class BreadthFirstSearchAlgorithmTests {
         assertThat(chain.result().parents()).containsEntry("B", "A").containsEntry("C", "B");
         assertThat(chain.result().edgeExaminationCount()).isEqualTo(4);
     }
+
+    @Test
+    void stopsWhenDestinationIsDequeuedAndReconstructsAFewestEdgePath() {
+        var trace = new BreadthFirstSearchAlgorithm().execute(
+                List.of("A", "B", "C", "D", "E"),
+                List.of(
+                        new BreadthFirstSearchAlgorithm.Edge("A", "B"),
+                        new BreadthFirstSearchAlgorithm.Edge("A", "C"),
+                        new BreadthFirstSearchAlgorithm.Edge("B", "D"),
+                        new BreadthFirstSearchAlgorithm.Edge("C", "E")),
+                "A", "B");
+
+        assertThat(trace.events()).extracting(BreadthFirstSearchAlgorithm.Event::type)
+                .endsWith(BreadthFirstSearchAlgorithm.EventType.NODE_DEQUEUED,
+                        BreadthFirstSearchAlgorithm.EventType.PATH_RECONSTRUCTED);
+        assertThat(trace.result().traversalOrder()).containsExactly("A", "B");
+        assertThat(trace.result().parents()).containsEntry("B", "A").containsEntry("C", "A");
+        assertThat(trace.result().pathFound()).isTrue();
+        assertThat(trace.result().path()).containsExactly("A", "B");
+        assertThat(trace.result().pathEdgeCount()).isEqualTo(1);
+        assertThat(trace.result().unreachableNodes()).isEmpty();
+        assertThat(trace.result().unexploredNodes()).containsExactly("C", "D", "E");
+        assertThat(trace.result().visitedNodeCount()).isEqualTo(2);
+        assertThat(trace.result().edgeExaminationCount()).isEqualTo(2);
+        assertThat(trace.result().maximumQueueSize()).isEqualTo(2);
+        var reconstruction = trace.events().getLast();
+        assertThat(reconstruction.state().selectedPath()).containsExactly("A", "B");
+        assertThat(reconstruction.state().queue()).containsExactly("C");
+        assertThat(reconstruction.data()).isEqualTo(new BreadthFirstSearchAlgorithm.PathData(
+                "PATH_RECONSTRUCTED", "B", true, List.of("A", "B"), 1));
+        assertThatThrownBy(() -> reconstruction.state().selectedPath().add("C"))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void handlesStartAsDestinationWithoutExaminingEdges() {
+        var trace = new BreadthFirstSearchAlgorithm().execute(
+                List.of("A", "B"),
+                List.of(new BreadthFirstSearchAlgorithm.Edge("A", "B")),
+                "A", "A");
+
+        assertThat(trace.events()).extracting(BreadthFirstSearchAlgorithm.Event::type)
+                .containsExactly(
+                        BreadthFirstSearchAlgorithm.EventType.TRAVERSAL_INITIALIZED,
+                        BreadthFirstSearchAlgorithm.EventType.NODE_DEQUEUED,
+                        BreadthFirstSearchAlgorithm.EventType.PATH_RECONSTRUCTED);
+        assertThat(trace.result().pathFound()).isTrue();
+        assertThat(trace.result().path()).containsExactly("A");
+        assertThat(trace.result().pathEdgeCount()).isZero();
+        assertThat(trace.result().unexploredNodes()).containsExactly("B");
+        assertThat(trace.result().edgeExaminationCount()).isZero();
+    }
+
+    @Test
+    void completesNormallyWhenDestinationIsUnreachable() {
+        var trace = new BreadthFirstSearchAlgorithm().execute(
+                List.of("A", "B", "Z"),
+                List.of(new BreadthFirstSearchAlgorithm.Edge("A", "B")),
+                "A", "Z");
+
+        assertThat(trace.result().traversalOrder()).containsExactly("A", "B");
+        assertThat(trace.result().pathFound()).isFalse();
+        assertThat(trace.result().path()).isEmpty();
+        assertThat(trace.result().pathEdgeCount()).isNull();
+        assertThat(trace.result().unreachableNodes()).containsExactly("Z");
+        assertThat(trace.result().unexploredNodes()).isEmpty();
+        assertThat(trace.events().getLast().type())
+                .isEqualTo(BreadthFirstSearchAlgorithm.EventType.PATH_RECONSTRUCTED);
+        assertThat(((BreadthFirstSearchAlgorithm.PathData) trace.events().getLast().data()).pathFound())
+                .isFalse();
+    }
 }

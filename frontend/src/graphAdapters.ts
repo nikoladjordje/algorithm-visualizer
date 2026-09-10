@@ -16,13 +16,14 @@ export interface GraphAlgorithmAdapter {
   pseudocode: AlgorithmAdapter['pseudocode']
   complexity: AlgorithmAdapter['complexity']
   presets: readonly GraphPreset[]
-  createTrace: (graph: { nodes: string[]; edges: GraphEdge[]; startNode: string }, signal?: AbortSignal) => Promise<GraphAlgorithmTrace>
+  destination: 'NONE' | 'OPTIONAL'
+  createTrace: (graph: { nodes: string[]; edges: GraphEdge[]; startNode: string; destination?: string }, signal?: AbortSignal) => Promise<GraphAlgorithmTrace>
   explain: (event: GraphAlgorithmEvent) => string
   complete: (result: GraphAlgorithmResult) => string
   completionAnnouncement: string
   metricsLabel: string
   metrics: (result: GraphAlgorithmResult) => { label: string; value: number }[]
-  present: (nodes: string[], state?: GraphAlgorithmState, unreachableNodes?: string[]) => GraphPresentation
+  present: (nodes: string[], state?: GraphAlgorithmState, result?: GraphAlgorithmResult) => GraphPresentation
 }
 
 const BFS_LINES = [
@@ -33,6 +34,7 @@ const BFS_LINES = [
   { id: 'bfs-skip-neighbor', text: 'skip a neighbor that was already discovered' },
   { id: 'bfs-complete-node', text: 'mark node processed' },
   { id: 'bfs-complete-traversal', text: 'return traversal order' },
+  { id: 'bfs-reconstruct-path', text: 'reconstruct the fewest-edge path from parents' },
 ]
 
 function explainGraphEvent(event: GraphTraversalEvent): string {
@@ -51,6 +53,10 @@ function explainGraphEvent(event: GraphTraversalEvent): string {
       return `Finish ${event.data.node}; all of its neighbors were examined.`
     case 'TRAVERSAL_COMPLETED':
       return `Traversal complete: ${event.data.traversalOrder.join(', ')}.`
+    case 'PATH_RECONSTRUCTED':
+      return event.data.pathFound
+        ? `Fewest-edge path reconstructed: ${event.data.path.join(' → ')}.`
+        : `No path reaches destination ${event.data.destination}.`
   }
 }
 
@@ -73,12 +79,21 @@ export const breadthFirstAdapter: GraphAlgorithmAdapter = {
     { label: 'Space', value: 'O(V)', explanation: 'The queue and node state grow with the graph.' },
   ],
   presets: graphPresets,
+  destination: 'OPTIONAL',
   inputWarning: edges => edges.some(edge => edge.weight !== undefined)
     ? 'Breadth-first search ignores edge weights. Its search-tree routes minimize edge count, not total cost.'
     : undefined,
   createTrace: createGraphTraversalTrace,
   explain: event => explainGraphEvent(event as GraphTraversalEvent),
-  complete: result => `Breadth-first traversal is complete. Unreachable nodes: ${result.unreachableNodes.join(', ') || 'none'}.`,
+  complete: result => {
+    const bfsResult = result as GraphTraversalTrace['result']
+    if (bfsResult.pathFound === true) {
+      const edges = bfsResult.pathEdgeCount === 1 ? 'edge' : 'edges'
+      return `Fewest-edge path found: ${bfsResult.path?.join(' → ')} (${bfsResult.pathEdgeCount} ${edges}).`
+    }
+    if (bfsResult.pathFound === false) return 'No path reaches the selected destination.'
+    return `Breadth-first traversal is complete. Unreachable nodes: ${result.unreachableNodes.join(', ') || 'none'}.`
+  },
   completionAnnouncement: 'Traversal complete.',
   metricsLabel: 'Traversal metrics',
   metrics: result => [
@@ -86,13 +101,21 @@ export const breadthFirstAdapter: GraphAlgorithmAdapter = {
     { label: 'edges examined', value: result.edgeExaminationCount },
     { label: 'max queue', value: (result as GraphTraversalTrace['result']).maximumQueueSize },
   ],
-  present(nodes, state, unreachableNodes) {
+  present(nodes, state, result) {
     const bfsState = state as GraphTraversalState | undefined
+    const bfsResult = result as GraphTraversalTrace['result'] | undefined
     const nodeStates = nodes.map(node => `${node}: ${statusLabel[bfsState?.nodeStatuses[node] ?? 'UNREACHED']}`)
     const parents = nodes.flatMap(child => bfsState?.parents[child] ? [`${child} from ${bfsState.parents[child]}`] : [])
     const examinedEdge = bfsState?.examinedEdge ? `${bfsState.examinedEdge.from}–${bfsState.examinedEdge.to}` : 'none'
-    const completion = unreachableNodes === undefined ? '' : ` Unreachable nodes: ${unreachableNodes.join(', ') || 'none'}.`
-    const description = `${nodeStates.join(', ')}. Queue: ${bfsState?.queue.join(', ') || 'empty'}. Traversal order: ${bfsState?.traversalOrder.join(', ') || 'empty'}. Examined edge: ${examinedEdge}. Parents: ${parents.join(', ') || 'none'}.${completion}`
+    const unreachable = bfsResult?.unreachableNodes
+    const unexplored = bfsResult?.unexploredNodes
+    const selectedPath = bfsState?.selectedPath ?? []
+    const pathDescription = bfsResult?.pathFound === true
+      ? ` Fewest-edge path: ${selectedPath.join(' → ')}.`
+      : bfsResult?.pathFound === false ? ' Fewest-edge path: none.' : ''
+    const completion = unreachable === undefined ? '' : ` Unreachable nodes: ${unreachable.join(', ') || 'none'}.`
+    const unexploredDescription = unexplored === undefined ? '' : ` Unexplored nodes: ${unexplored.join(', ') || 'none'}.`
+    const description = `${nodeStates.join(', ')}. Queue: ${bfsState?.queue.join(', ') || 'empty'}. Traversal order: ${bfsState?.traversalOrder.join(', ') || 'empty'}. Examined edge: ${examinedEdge}. Parents: ${parents.join(', ') || 'none'}.${pathDescription}${completion}${unexploredDescription}`
     const treeEdges = Object.entries(bfsState?.parents ?? {}).map(([child, parent]) => ({ from: child, to: parent }))
     const currentEdge = bfsState?.examinedEdge ?? null
     return {
@@ -103,6 +126,7 @@ export const breadthFirstAdapter: GraphAlgorithmAdapter = {
         return [node, { label: statusLabel[status], symbol: statusSymbol[status], style: status.toLowerCase() }]
       })),
       treeEdges,
+      selectedPathEdges: selectedPath.slice(1).map((node, index) => ({ from: selectedPath[index], to: node })),
       examinedEdge: currentEdge,
       rows: [
         { label: 'Queue', value: bfsState?.queue.join(' → ') || 'Empty' },
@@ -110,7 +134,9 @@ export const breadthFirstAdapter: GraphAlgorithmAdapter = {
         { label: 'Node states', value: nodeStates.join('; ') },
         { label: 'Parents', value: parents.join('; ') || 'None' },
         { label: 'Examined edge', value: examinedEdge === 'none' ? 'None' : examinedEdge },
-        ...(unreachableNodes === undefined ? [] : [{ label: 'Unreachable nodes', value: unreachableNodes.join(' → ') || 'None' }]),
+        ...(bfsResult?.pathFound === undefined ? [] : [{ label: 'Fewest-edge path', value: selectedPath.join(' → ') || 'None' }]),
+        ...(unreachable === undefined ? [] : [{ label: 'Unreachable nodes', value: unreachable.join(' → ') || 'None' }]),
+        ...(unexplored === undefined ? [] : [{ label: 'Unexplored nodes', value: unexplored.join(' → ') || 'None' }]),
       ],
     }
   },
@@ -157,10 +183,15 @@ export const depthFirstAdapter: GraphAlgorithmAdapter = {
     { label: 'Space', value: 'O(V)', explanation: 'The stack and node state grow with the graph.' },
   ],
   presets: graphPresets,
+  destination: 'NONE',
   inputWarning: edges => edges.some(edge => edge.weight !== undefined)
     ? 'Depth-first search ignores edge weights; they do not affect traversal order.'
     : undefined,
-  createTrace: createDepthFirstSearchTrace,
+  createTrace: (request, signal) => createDepthFirstSearchTrace({
+    nodes: request.nodes,
+    edges: request.edges,
+    startNode: request.startNode,
+  }, signal),
   explain: event => explainDepthFirstEvent(event as DepthFirstSearchEvent),
   complete: result => `Depth-first traversal is complete. Unreachable nodes: ${result.unreachableNodes.join(', ') || 'none'}.`,
   completionAnnouncement: 'Depth-first traversal complete.',
@@ -170,11 +201,12 @@ export const depthFirstAdapter: GraphAlgorithmAdapter = {
     { label: 'edges examined', value: result.edgeExaminationCount },
     { label: 'max stack', value: (result as DepthFirstSearchTrace['result']).maximumStackSize },
   ],
-  present(nodes, state, unreachableNodes) {
+  present(nodes, state, result) {
     const dfsState = state as DepthFirstSearchState | undefined
     const nodeStates = nodes.map(node => `${node}: ${statusLabel[dfsState?.nodeStatuses[node] ?? 'UNREACHED']}`)
     const parents = nodes.flatMap(child => dfsState?.parents[child] ? [`${child} from ${dfsState.parents[child]}`] : [])
     const examinedEdge = dfsState?.examinedEdge ? `${dfsState.examinedEdge.from}–${dfsState.examinedEdge.to}` : 'none'
+    const unreachableNodes = result?.unreachableNodes
     const completion = unreachableNodes === undefined ? '' : ` Unreachable nodes: ${unreachableNodes.join(', ') || 'none'}.`
     const description = `${nodeStates.join(', ')}. Stack (top first): ${dfsState?.stack.join(', ') || 'empty'}. Traversal order: ${dfsState?.traversalOrder.join(', ') || 'empty'}. Examined edge: ${examinedEdge}. Parents: ${parents.join(', ') || 'none'}.${completion}`
     return {
@@ -185,6 +217,7 @@ export const depthFirstAdapter: GraphAlgorithmAdapter = {
         return [node, { label: statusLabel[status], symbol: statusSymbol[status], style: status.toLowerCase() }]
       })),
       treeEdges: Object.entries(dfsState?.parents ?? {}).map(([child, parent]) => ({ from: child, to: parent })),
+      selectedPathEdges: [],
       examinedEdge: dfsState?.examinedEdge ?? null,
       rows: [
         { label: 'Stack (top first)', value: dfsState?.stack.join(' → ') || 'Empty' },

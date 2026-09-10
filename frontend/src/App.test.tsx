@@ -42,7 +42,8 @@ describe('App algorithm workbench',()=>{
   vi.stubGlobal('fetch', fetchMock)
   const user = userEvent.setup()
   render(<App />)
-  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'bfs')
+  await screen.findByRole('option', { name: 'Breadth-First Search' })
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'bfs')
   expect(screen.queryByText(/ignores edge weights/)).not.toBeInTheDocument()
   fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-B:1\nB-C' } })
   expect(screen.getByText(/ignores edge weights.*minimize edge count, not total cost/)).toBeInTheDocument()
@@ -74,6 +75,57 @@ describe('App algorithm workbench',()=>{
  it('applies fixed graph presets without executing',async()=>{vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}})));const user=userEvent.setup();render(<App/>);await user.selectOptions(await screen.findByLabelText('Algorithm'),'bfs');await user.click(screen.getByRole('button',{name:'Branching'}));expect(screen.getByLabelText('Graph input')).toHaveValue('A-B\nA-C\nB-D\nB-E\nC-F');expect(screen.getByLabelText('Start node')).toHaveValue('A');expect(fetch).toHaveBeenCalledOnce();await user.click(screen.getByRole('button',{name:'Disconnected'}));expect(screen.getByLabelText('Graph input')).toHaveValue('A-B\nB-C\nD-E\nF');expect(screen.getByLabelText('Start node')).toHaveValue('A');expect(fetch).toHaveBeenCalledOnce()})
 
  it('retains separate family drafts and clears run state on algorithm changes',async()=>{vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?fullCatalog:trace),{status:200,headers:{'Content-Type':'application/json'}})));const user=userEvent.setup();render(<App/>);const algorithm=await screen.findByLabelText('Algorithm');const array=screen.getByLabelText('Array values');await user.clear(array);await user.type(array,'9, 4');await user.click(screen.getByRole('button',{name:'Visualize'}));await screen.findByRole('img');await user.selectOptions(algorithm,'bfs');expect(screen.queryByRole('img')).not.toBeInTheDocument();expect(screen.getByText('Ready')).toBeInTheDocument();fireEvent.change(screen.getByLabelText('Graph input'),{target:{value:'X-Y\nZ'}});await user.selectOptions(screen.getByLabelText('Start node'),'Y');await user.selectOptions(algorithm,'selection');expect(screen.getByLabelText('Array values')).toHaveValue('9, 4');await user.selectOptions(algorithm,'bfs');expect(screen.getByLabelText('Graph input')).toHaveValue('X-Y\nZ');expect(screen.getByLabelText('Start node')).toHaveValue('Y');expect(fetch).toHaveBeenCalledTimes(2)})
+
+ it('submits an optional BFS destination and reveals its selected path only at completion', async () => {
+  const targetedTrace = {
+   apiVersion: '2.0', algorithm: { id: 'bfs', name: 'Breadth-First Search', family: 'GRAPH_TRAVERSAL' },
+   input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A', 'B', 'C', 'D'], edges: [{ from: 'A', to: 'B' }, { from: 'B', to: 'C' }, { from: 'A', to: 'D' }], startNode: 'A', destination: 'C' },
+   result: { kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A', 'B', 'D', 'C'], parents: { B: 'A', D: 'A', C: 'B' }, unreachableNodes: [], pathFound: true, path: ['A', 'B', 'C'], pathEdgeCount: 2, unexploredNodes: [], visitedNodeCount: 4, edgeExaminationCount: 5, maximumQueueSize: 2 },
+   limits: { maximumEvents: 10000 },
+   events: [{ sequence: 1, type: 'PATH_RECONSTRUCTED', pseudocodeLineId: 'bfs-reconstruct-path', state: { kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'PROCESSED', B: 'PROCESSED', C: 'ACTIVE', D: 'PROCESSED' }, queue: [], traversalOrder: ['A', 'B', 'D', 'C'], parents: { B: 'A', D: 'A', C: 'B' }, examinedEdge: null, selectedPath: ['A', 'B', 'C'] }, data: { kind: 'PATH_RECONSTRUCTED', destination: 'C', pathFound: true, path: ['A', 'B', 'C'], pathEdgeCount: 2 } }],
+  }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+   void init
+   return new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? fullCatalog : targetedTrace), {
+    headers: { 'Content-Type': 'application/json' },
+   })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  const { container } = render(<App />)
+  await screen.findByRole('option', { name: 'Breadth-First Search' })
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'bfs')
+  fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-B\nB-C\nA-D' } })
+  await user.selectOptions(screen.getByLabelText('Destination'), 'C')
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+
+  await screen.findByRole('img', { name: /Breadth-first traversal graph/ })
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual(targetedTrace.input)
+  expect(container.querySelector('.graph-edge--selected-path')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('Fewest-edge path found: A → B → C (2 edges).')).toBeInTheDocument()
+  expect(screen.getByText('A → B → C')).toBeInTheDocument()
+  expect(container.querySelectorAll('.graph-edge--selected-path')).toHaveLength(2)
+ })
+
+ it('retains a BFS destination across graph-algorithm switches and clears it when removed', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([...fullCatalog, dfsCatalog]), {
+   headers: { 'Content-Type': 'application/json' },
+  })))
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('option', { name: 'Depth-First Search' })
+  const algorithm = screen.getByLabelText('Algorithm')
+  await user.selectOptions(algorithm, 'bfs')
+  fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'X-Y\nY-Z' } })
+  await user.selectOptions(screen.getByLabelText('Destination'), 'Y')
+  await user.selectOptions(algorithm, 'dfs')
+  expect(screen.queryByLabelText('Destination')).not.toBeInTheDocument()
+  await user.selectOptions(algorithm, 'bfs')
+  expect(screen.getByLabelText('Destination')).toHaveValue('Y')
+  fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'X-Z' } })
+  expect(screen.getByLabelText('Destination')).toHaveValue('')
+ })
 
  it('selects either family from the URL without encoding drafts',async()=>{history.replaceState(null,'','/?algorithm=bfs');vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}})));render(<App/>);await waitFor(()=>expect(screen.getByLabelText('Algorithm')).toHaveValue('bfs'));expect(screen.getByLabelText('Graph input')).toHaveValue('A');expect(location.search).toBe('?algorithm=bfs');expect(fetch).toHaveBeenCalledOnce()})
 

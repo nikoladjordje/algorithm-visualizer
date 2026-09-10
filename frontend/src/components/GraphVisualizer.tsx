@@ -7,6 +7,7 @@ export interface GraphPresentation {
   description: string
   nodes: Record<string, { label: string; symbol: string; style: string }>
   treeEdges: GraphEdge[]
+  selectedPathEdges: GraphEdge[]
   examinedEdge: GraphEdge | null
   rows: { label: string; value: string }[]
 }
@@ -22,6 +23,7 @@ const edgeKey = (from: string, to: string) => [from, to].sort().join('\0')
 export function GraphVisualizer({ nodes, edges, presentation }: Props) {
   const { title, description } = presentation
   const treeEdges = new Set(presentation.treeEdges.map(edge => edgeKey(edge.from, edge.to)))
+  const selectedPathEdges = new Set(presentation.selectedPathEdges.map(edge => edgeKey(edge.from, edge.to)))
   const currentEdge = presentation.examinedEdge ? edgeKey(presentation.examinedEdge.from, presentation.examinedEdge.to) : null
   const { positions, labels, width, height, weighted } = useMemo(() => graphLayout(nodes, edges), [nodes, edges])
   const edgeDescription = weighted ? ` Edges: ${edges.map(edge => `${edge.from}–${edge.to}: ${edge.weight === undefined ? 'unweighted' : `weight ${edge.weight}`}`).join('; ')}.` : ''
@@ -32,7 +34,7 @@ export function GraphVisualizer({ nodes, edges, presentation }: Props) {
       style={weighted ? { width, height } : undefined}>
       <title>{title}</title>
       <desc>{description}{edgeDescription}</desc>
-      {edges.map(({ from, to }) => { const key=edgeKey(from,to); const kind=currentEdge===key?'examined':treeEdges.has(key)?'tree':'base'; return <line key={`${from}-${to}`} className={`graph-edge graph-edge--${kind}`}
+      {edges.map(({ from, to }) => { const key=edgeKey(from,to); const kind=selectedPathEdges.has(key)?'selected-path':currentEdge===key?'examined':treeEdges.has(key)?'tree':'base'; return <line key={`${from}-${to}`} className={`graph-edge graph-edge--${kind}`}
         x1={positions[from].x} y1={positions[from].y} x2={positions[to].x} y2={positions[to].y}
         stroke="currentColor" aria-hidden="true" vectorEffect="non-scaling-stroke" />})}
       {labels.map(({ edge, x, y, anchor }) => <path key={`${edge.from}-${edge.to}`}

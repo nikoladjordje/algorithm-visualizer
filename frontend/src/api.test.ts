@@ -74,6 +74,23 @@ describe('createGraphTraversalTrace', () => {
       }),
     }))
   })
+
+  it('includes an optional destination in a targeted BFS request', async () => {
+    const graphTrace = {
+      apiVersion: '2.0', algorithm: { id: 'bfs', name: 'Breadth-First Search', family: 'GRAPH_TRAVERSAL' },
+      input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A', 'B'], edges: [{ from: 'A', to: 'B' }], startNode: 'A', destination: 'B' },
+      result: { kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A', 'B'], parents: { B: 'A' }, unreachableNodes: [], pathFound: true, path: ['A', 'B'], pathEdgeCount: 1, unexploredNodes: [], visitedNodeCount: 2, edgeExaminationCount: 1, maximumQueueSize: 1 },
+      limits: { maximumEvents: 10000 }, events: [],
+    }
+    const fetchMock = vi.fn().mockResolvedValue(response(graphTrace, 200))
+    vi.stubGlobal('fetch', fetchMock)
+    const graph = { nodes: ['A', 'B'], edges: [{ from: 'A', to: 'B' }], startNode: 'A', destination: 'B' }
+
+    await expect(createGraphTraversalTrace(graph)).resolves.toEqual(graphTrace)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/bfs/trace', expect.objectContaining({
+      body: JSON.stringify({ kind: 'GRAPH_TRAVERSAL', ...graph }),
+    }))
+  })
 })
 
 describe('createDepthFirstSearchTrace', () => {
