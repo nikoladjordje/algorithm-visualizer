@@ -119,6 +119,9 @@ export const breadthFirstAdapter: GraphAlgorithmAdapter = {
 const DFS_LINES = [
   { id: 'dfs-initialize', text: 'mark start discovered; push start onto stack' },
   { id: 'dfs-pop', text: 'pop node from stack; mark active; visit node' },
+  { id: 'dfs-examine-edge', text: 'examine the next neighbor' },
+  { id: 'dfs-push-neighbor', text: 'mark neighbor discovered; record parent; push onto stack' },
+  { id: 'dfs-skip-neighbor', text: 'skip a neighbor that was already discovered' },
   { id: 'dfs-complete-node', text: 'mark node processed' },
   { id: 'dfs-complete-traversal', text: 'return traversal order' },
 ]
@@ -129,8 +132,14 @@ function explainDepthFirstEvent(event: DepthFirstSearchEvent): string {
       return `Discover and push ${event.data.startNode} onto the stack.`
     case 'NODE_POPPED':
       return `Pop and visit ${event.data.node}.`
+    case 'EDGE_EXAMINED':
+      return `Examine edge ${event.data.from}–${event.data.to}.`
+    case 'NODE_DISCOVERED':
+      return `Discover ${event.data.node} from ${event.data.parent} and push it onto the stack.`
+    case 'ALREADY_DISCOVERED_SKIPPED':
+      return `Skip ${event.data.to}; it was already discovered.`
     case 'NODE_COMPLETED':
-      return `Finish ${event.data.node}; it is now processed.`
+      return `Finish ${event.data.node}; all of its neighbors were examined.`
     case 'TRAVERSAL_COMPLETED':
       return `Traversal complete: ${event.data.traversalOrder.join(', ')}.`
   }
@@ -147,7 +156,7 @@ export const depthFirstAdapter: GraphAlgorithmAdapter = {
     { label: 'Time', value: 'O(V + E)', explanation: 'Each reachable node and edge is examined.' },
     { label: 'Space', value: 'O(V)', explanation: 'The stack and node state grow with the graph.' },
   ],
-  presets: graphPresets.filter(preset => preset.input.trim().split('\n').length === 1),
+  presets: graphPresets,
   inputWarning: edges => edges.some(edge => edge.weight !== undefined)
     ? 'Depth-first search ignores edge weights; they do not affect traversal order.'
     : undefined,

@@ -90,17 +90,21 @@ describe('DFS adapter', () => {
     }))
   })
 
-  it('presents a stack and every single-node event in plain language', () => {
+  it('presents a stack and every DFS event in plain language', () => {
     const base = { sequence: 1, state: dfsState }
     const events: DepthFirstSearchEvent[] = [
       { ...base, type: 'TRAVERSAL_INITIALIZED', pseudocodeLineId: 'dfs-initialize', data: { kind: 'TRAVERSAL_INITIALIZED', startNode: 'A' } },
       { ...base, type: 'NODE_POPPED', pseudocodeLineId: 'dfs-pop', data: { kind: 'NODE_POPPED', node: 'A' } },
+      { ...base, type: 'EDGE_EXAMINED', pseudocodeLineId: 'dfs-examine-edge', data: { kind: 'EDGE_EXAMINED', from: 'A', to: 'B' } },
+      { ...base, type: 'NODE_DISCOVERED', pseudocodeLineId: 'dfs-push-neighbor', data: { kind: 'NODE_DISCOVERED', node: 'B', parent: 'A' } },
+      { ...base, type: 'ALREADY_DISCOVERED_SKIPPED', pseudocodeLineId: 'dfs-skip-neighbor', data: { kind: 'ALREADY_DISCOVERED_SKIPPED', from: 'B', to: 'A' } },
       { ...base, type: 'NODE_COMPLETED', pseudocodeLineId: 'dfs-complete-node', data: { kind: 'NODE_COMPLETED', node: 'A' } },
       { ...base, type: 'TRAVERSAL_COMPLETED', pseudocodeLineId: 'dfs-complete-traversal', data: { kind: 'TRAVERSAL_COMPLETED', traversalOrder: ['A'], unreachableNodes: [] } },
     ]
     expect(events.map(event => depthFirstAdapter.explain(event))).toEqual([
-      'Discover and push A onto the stack.', 'Pop and visit A.',
-      'Finish A; it is now processed.', 'Traversal complete: A.',
+      'Discover and push A onto the stack.', 'Pop and visit A.', 'Examine edge A–B.',
+      'Discover B from A and push it onto the stack.', 'Skip A; it was already discovered.',
+      'Finish A; all of its neighbors were examined.', 'Traversal complete: A.',
     ])
     expect(events.map(event => event.pseudocodeLineId)).toEqual(depthFirstAdapter.pseudocode.map(line => line.id))
     expect(depthFirstAdapter.present(['A'], dfsState).rows[0]).toEqual({ label: 'Stack (top first)', value: 'A' })
@@ -116,5 +120,29 @@ describe('DFS adapter', () => {
       expect.objectContaining({ label: 'Time', value: 'O(V + E)' }),
       expect.objectContaining({ label: 'Space', value: 'O(V)' }),
     ]))
+  })
+
+  it('shows the top-first stack, search tree, examined edge, and ignored-weight warning', () => {
+    const connectedState: DepthFirstSearchState = {
+      kind: 'GRAPH_TRAVERSAL',
+      nodeStatuses: { A: 'ACTIVE', C: 'DISCOVERED', B: 'DISCOVERED', Z: 'UNREACHED' },
+      stack: ['C', 'B'], traversalOrder: ['A'], parents: { B: 'A', C: 'A' },
+      examinedEdge: { from: 'A', to: 'C' },
+    }
+    const original = structuredClone(connectedState)
+    const presentation = depthFirstAdapter.present(['A', 'C', 'B', 'Z'], connectedState, ['Z'])
+
+    expect(presentation.rows.slice(0, 2)).toEqual([
+      { label: 'Stack (top first)', value: 'C → B' },
+      { label: 'Traversal order', value: 'A' },
+    ])
+    expect(presentation.treeEdges).toEqual([{ from: 'B', to: 'A' }, { from: 'C', to: 'A' }])
+    expect(presentation.examinedEdge).toEqual({ from: 'A', to: 'C' })
+    expect(presentation.description).toContain('Unreachable nodes: Z.')
+    expect(depthFirstAdapter.inputWarning([{ from: 'A', to: 'C', weight: 7 }]))
+      .toBe('Depth-first search ignores edge weights; they do not affect traversal order.')
+    expect(depthFirstAdapter.presets.map(preset => preset.label))
+      .toEqual(['Branching', 'Cycle', 'Disconnected'])
+    expect(connectedState).toEqual(original)
   })
 })

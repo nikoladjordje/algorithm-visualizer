@@ -62,7 +62,7 @@ public class V2AlgorithmController {
                 new V2Contracts.GraphTraversalConstraints(GRAPH_TRAVERSAL, 1, 12, 66,
                         "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99)));
         catalog.add(new V2Contracts.CatalogEntry("dfs", "Depth-First Search", GRAPH_TRAVERSAL, "2.0",
-                new V2Contracts.GraphTraversalConstraints(GRAPH_TRAVERSAL, 1, 1, 0,
+                new V2Contracts.GraphTraversalConstraints(GRAPH_TRAVERSAL, 1, 12, 66,
                         "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99)));
         return List.copyOf(catalog);
     }
@@ -95,8 +95,14 @@ public class V2AlgorithmController {
             if (!GRAPH_TRAVERSAL.equals(request.kind())) {
                 throw new AlgorithmFamilyMismatchException(algorithmId, GRAPH_TRAVERSAL);
             }
-            validateSingleNodeDepthFirstGraph(request);
-            var graphTrace = depthFirstSearch.execute(request.nodes(), request.startNode());
+            validateGraph(request);
+            var edges = request.edges().stream()
+                    .map(edge -> new IterativeDepthFirstSearchAlgorithm.Edge(edge.from(), edge.to()))
+                    .toList();
+            var graphTrace = depthFirstSearch.execute(request.nodes(), edges, request.startNode());
+            if (graphTrace.events().size() > MAXIMUM_EVENTS) {
+                throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            }
             return new V2Contracts.DepthFirstSearchTrace("2.0",
                     new V2Contracts.AlgorithmInfo("dfs", "Depth-First Search", GRAPH_TRAVERSAL),
                     new V2Contracts.GraphTraversalInput(GRAPH_TRAVERSAL, request.nodes(), request.edges(),
@@ -154,16 +160,6 @@ public class V2AlgorithmController {
                 throw new GraphValidationException(field, "Edge " + (index + 1)
                         + ": duplicate edge; first declared as edge " + (original + 1));
             }
-        }
-    }
-
-    private static void validateSingleNodeDepthFirstGraph(V2Request request) {
-        validateGraph(request);
-        if (request.nodes().size() != 1) {
-            throw new GraphValidationException("nodes", "Single-node DFS currently requires exactly one node");
-        }
-        if (!request.edges().isEmpty()) {
-            throw new GraphValidationException("edges", "Single-node DFS currently requires no edges");
         }
     }
 

@@ -92,8 +92,8 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$[7].id").value("dfs"))
                 .andExpect(jsonPath("$[7].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[7].constraints.kind").value("GRAPH_TRAVERSAL"))
-                .andExpect(jsonPath("$[7].constraints.maximumNodes").value(1))
-                .andExpect(jsonPath("$[7].constraints.maximumEdges").value(0));
+                .andExpect(jsonPath("$[7].constraints.maximumNodes").value(12))
+                .andExpect(jsonPath("$[7].constraints.maximumEdges").value(66));
 
         mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -126,13 +126,30 @@ class AlgorithmControllerTests {
     }
 
     @Test
-    void rejectsDepthFirstSearchOutsideTheSingleNodeSlice() throws Exception {
+    void runsConnectedAndDisconnectedDepthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\",\"B\"],\"edges\":[],\"startNode\":\"A\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
-                .andExpect(jsonPath("$.field").value("nodes"));
+                        .content("""
+                                {"kind":"GRAPH_TRAVERSAL","nodes":["A","C","B","D","Z"],
+                                 "edges":[{"from":"B","to":"D","weight":99},
+                                          {"from":"A","to":"B"},{"from":"C","to":"D"},
+                                          {"from":"A","to":"C","weight":1}],
+                                 "startNode":"A"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.edges[0].weight").value(99))
+                .andExpect(jsonPath("$.result.traversalOrder[0]").value("A"))
+                .andExpect(jsonPath("$.result.traversalOrder[1]").value("C"))
+                .andExpect(jsonPath("$.result.traversalOrder[2]").value("D"))
+                .andExpect(jsonPath("$.result.traversalOrder[3]").value("B"))
+                .andExpect(jsonPath("$.result.parents.C").value("A"))
+                .andExpect(jsonPath("$.result.parents.D").value("C"))
+                .andExpect(jsonPath("$.result.unreachableNodes[0]").value("Z"))
+                .andExpect(jsonPath("$.result.edgeExaminationCount").value(8))
+                .andExpect(jsonPath("$.result.maximumStackSize").value(2))
+                .andExpect(jsonPath("$.events[2].type").value("EDGE_EXAMINED"))
+                .andExpect(jsonPath("$.events[3].type").value("NODE_DISCOVERED"))
+                .andExpect(jsonPath("$.events[3].state.examinedEdge.to").value("B"));
 
         mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -206,12 +223,21 @@ class AlgorithmControllerTests {
         }
         String quotedNodes = nodes.stream().map(node -> "\"" + node + "\"")
                 .collect(java.util.stream.Collectors.joining(","));
+        String maximumGraph = "{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[" + quotedNodes
+                + "],\"edges\":[" + String.join(",", edges) + "],\"startNode\":\"N0\"}";
         mockMvc.perform(post("/api/v2/algorithms/bfs/trace").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[" + quotedNodes
-                                + "],\"edges\":[" + String.join(",", edges) + "],\"startNode\":\"N0\"}"))
+                        .content(maximumGraph))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.input.nodes.length()").value(12))
                 .andExpect(jsonPath("$.input.edges.length()").value(66));
+
+        mockMvc.perform(post("/api/v2/algorithms/dfs/trace").contentType(MediaType.APPLICATION_JSON)
+                        .content(maximumGraph))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.nodes.length()").value(12))
+                .andExpect(jsonPath("$.input.edges.length()").value(66))
+                .andExpect(jsonPath("$.events.length()").value(290))
+                .andExpect(jsonPath("$.limits.maximumEvents").value(10_000));
 
         mockMvc.perform(post("/api/v2/algorithms/bfs/trace").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"kind\":\"GRAPH_TRAVERSAL\",\"nodes\":[\"A\",\"C\",\"B\"],"

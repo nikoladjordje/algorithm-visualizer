@@ -117,6 +117,9 @@ export interface DepthFirstSearchState {
 interface DepthFirstSearchEventDataByType {
   TRAVERSAL_INITIALIZED: { kind: 'TRAVERSAL_INITIALIZED'; startNode: string }
   NODE_POPPED: { kind: 'NODE_POPPED'; node: string }
+  EDGE_EXAMINED: { kind: 'EDGE_EXAMINED'; from: string; to: string }
+  NODE_DISCOVERED: { kind: 'NODE_DISCOVERED'; node: string; parent: string }
+  ALREADY_DISCOVERED_SKIPPED: { kind: 'ALREADY_DISCOVERED_SKIPPED'; from: string; to: string }
   NODE_COMPLETED: { kind: 'NODE_COMPLETED'; node: string }
   TRAVERSAL_COMPLETED: { kind: 'TRAVERSAL_COMPLETED'; traversalOrder: string[]; unreachableNodes: string[] }
 }

@@ -5,7 +5,7 @@ import App from './App'
 const constraints={kind:'SORTING',minimumValues:1,maximumValues:50,minimumValue:-2147483648,maximumValue:2147483647}
 const catalog=[{id:'insertion',name:'Insertion Sort',family:'SORTING',contractVersion:'2.0',constraints}]
 const graphCatalog={id:'bfs',name:'Breadth-First Search',family:'GRAPH_TRAVERSAL',contractVersion:'2.0',constraints:{kind:'GRAPH_TRAVERSAL',minimumNodes:1,maximumNodes:12,maximumEdges:66,nodeLabelPattern:'^[A-Za-z0-9_-]{1,16}$',directed:false,weighted:false}}
-const dfsCatalog={...graphCatalog,id:'dfs',name:'Depth-First Search',constraints:{...graphCatalog.constraints,maximumNodes:1,maximumEdges:0}}
+const dfsCatalog={...graphCatalog,id:'dfs',name:'Depth-First Search',constraints:{...graphCatalog.constraints,maximumNodes:12,maximumEdges:66}}
 const fullCatalog=[...catalog,{id:'selection',name:'Selection Sort',family:'SORTING',contractVersion:'2.0',constraints},graphCatalog]
 const trace={apiVersion:'2.0',algorithm:{id:'insertion',name:'Insertion Sort',family:'SORTING'},input:{kind:'SORTING',values:[2,1]},result:{kind:'SORTING',values:[1,2]},limits:{maximumEvents:10000},events:[{sequence:1,type:'MARK_SORTED',pseudocodeLineId:'complete-pass',state:{kind:'SORTING',items:[{id:1,value:1},{id:0,value:2}],sortedRanges:[{fromIndex:0,throughIndex:1}]},data:{kind:'MARK_SORTED',fromIndex:0,throughIndex:1}}]}
 beforeEach(()=>{history.replaceState(null,'','/');vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?catalog:trace),{status:200,headers:{'Content-Type':'application/json'}})))})
@@ -121,5 +121,39 @@ describe('App algorithm workbench',()=>{
   expect(screen.getAllByRole('status')).toEqual(expect.arrayContaining([
    expect.objectContaining({ textContent: 'Depth-first traversal complete.' }),
   ]))
+ })
+
+ it('plays connected weighted DFS while keeping stack and ignored-weight semantics visible', async () => {
+  const dfsTrace = {
+   apiVersion: '2.0', algorithm: { id: 'dfs', name: 'Depth-First Search', family: 'GRAPH_TRAVERSAL' },
+   input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A', 'B', 'C', 'D', 'Z'], edges: [{ from: 'A', to: 'B', weight: 9 }, { from: 'A', to: 'C' }, { from: 'B', to: 'D' }], startNode: 'A' },
+   result: { kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A', 'B', 'D', 'C'], parents: { C: 'A', B: 'A', D: 'B' }, unreachableNodes: ['Z'], visitedNodeCount: 4, edgeExaminationCount: 6, maximumStackSize: 2 },
+   limits: { maximumEvents: 10000 },
+   events: [
+    { sequence: 1, type: 'NODE_DISCOVERED', pseudocodeLineId: 'dfs-push-neighbor', state: { kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'ACTIVE', B: 'DISCOVERED', C: 'DISCOVERED', D: 'UNREACHED', Z: 'UNREACHED' }, stack: ['B', 'C'], traversalOrder: ['A'], parents: { C: 'A', B: 'A' }, examinedEdge: { from: 'A', to: 'B' } }, data: { kind: 'NODE_DISCOVERED', node: 'B', parent: 'A' } },
+    { sequence: 2, type: 'TRAVERSAL_COMPLETED', pseudocodeLineId: 'dfs-complete-traversal', state: { kind: 'GRAPH_TRAVERSAL', nodeStatuses: { A: 'PROCESSED', B: 'PROCESSED', C: 'PROCESSED', D: 'PROCESSED', Z: 'UNREACHED' }, stack: [], traversalOrder: ['A', 'B', 'D', 'C'], parents: { C: 'A', B: 'A', D: 'B' }, examinedEdge: null }, data: { kind: 'TRAVERSAL_COMPLETED', traversalOrder: ['A', 'B', 'D', 'C'], unreachableNodes: ['Z'] } },
+   ],
+  }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(
+   String(input).endsWith('/api/v2/algorithms') ? [...catalog, graphCatalog, dfsCatalog] : dfsTrace,
+  ), { headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'dfs')
+  fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-B:9\nA-C\nB-D\nZ' } })
+  expect(screen.getByText(/Depth-first search ignores edge weights/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+  expect(fetchMock).toHaveBeenLastCalledWith('/api/v2/algorithms/dfs/trace', expect.objectContaining({
+   body: JSON.stringify(dfsTrace.input),
+  }))
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getAllByText('Discover B from A and push it onto the stack.')).toHaveLength(2)
+  expect(screen.getByText('B → C')).toBeInTheDocument()
+  expect(screen.getByRole('group', { name: 'A–B, weight 9' })).toBeInTheDocument()
+  expect(screen.getByText(/Depth-first search ignores edge weights/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('Depth-first traversal is complete. Unreachable nodes: Z.')).toBeInTheDocument()
+  expect(screen.getByText('Z', { selector: 'dd' })).toBeInTheDocument()
  })
 })

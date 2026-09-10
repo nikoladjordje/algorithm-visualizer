@@ -2,8 +2,8 @@ import { axe } from 'vitest-axe'
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { GraphVisualizer } from './GraphVisualizer'
-import { breadthFirstAdapter } from '../graphAdapters'
-import type { GraphTraversalState } from '../types'
+import { breadthFirstAdapter, depthFirstAdapter } from '../graphAdapters'
+import type { DepthFirstSearchState, GraphTraversalState } from '../types'
 
 const nodes = ['A', 'B', 'C', 'D']
 const edges = [{ from: 'A', to: 'B' }, { from: 'B', to: 'C' }, { from: 'C', to: 'D' }]
@@ -74,5 +74,23 @@ describe('GraphVisualizer', () => {
     expect(screen.getByText('B from A; C from B')).toBeInTheDocument()
     expect(screen.getByText('B–C')).toBeInTheDocument()
     expect(screen.getByText('D', { selector: 'dd' })).toBeInTheDocument()
+  })
+
+  it('renders DFS stack state and weighted edges accessibly', async () => {
+    const dfsState: DepthFirstSearchState = {
+      kind: 'GRAPH_TRAVERSAL',
+      nodeStatuses: { A: 'PROCESSED', B: 'ACTIVE', C: 'DISCOVERED', D: 'UNREACHED' },
+      stack: ['C'], traversalOrder: ['A', 'B'], parents: { B: 'A', C: 'B' },
+      examinedEdge: { from: 'B', to: 'C' },
+    }
+    const mixedEdges = [{ from: 'A', to: 'B', weight: 9 }, ...edges.slice(1)]
+    const { container } = render(<GraphVisualizer nodes={nodes} edges={mixedEdges}
+      presentation={depthFirstAdapter.present(nodes, dfsState, ['D'])} />)
+
+    expect(screen.getByRole('img')).toHaveAccessibleName(/Stack \(top first\): C.*Unreachable nodes: D/)
+    expect(screen.getByText('Stack (top first)')).toBeInTheDocument()
+    expect(screen.getByText('C', { selector: 'dd' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'A–B, weight 9' })).toBeInTheDocument()
+    expect((await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toHaveLength(0)
   })
 })

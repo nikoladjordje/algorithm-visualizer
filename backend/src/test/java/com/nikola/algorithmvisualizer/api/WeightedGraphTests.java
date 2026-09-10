@@ -65,6 +65,20 @@ class WeightedGraphTests {
     }
 
     @Test
+    void weightsDoNotChangeAnyDfsEventsOrResults() throws Exception {
+        String edges = "{\"from\":\"A\",\"to\":\"B\"},{\"from\":\"A\",\"to\":\"C\"},{\"from\":\"B\",\"to\":\"C\"}";
+        var mapper = new ObjectMapper();
+        var unweighted = mapper.readTree(mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
+                .contentType(MediaType.APPLICATION_JSON).content(request(edges)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        var weighted = mapper.readTree(mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
+                .contentType(MediaType.APPLICATION_JSON).content(request(edges.replace("}", ",\"weight\":99}"))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(weighted.path("events")).isEqualTo(unweighted.path("events"));
+        assertThat(weighted.path("result")).isEqualTo(unweighted.path("result"));
+    }
+
+    @Test
     void rejectsOutOfRangeWeightsWithAnExactField() throws Exception {
         for (int weight : new int[] { -1, 0, 100 }) {
             mockMvc.perform(post("/api/v2/algorithms/bfs/trace").contentType(MediaType.APPLICATION_JSON)
