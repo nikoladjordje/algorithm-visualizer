@@ -11,6 +11,7 @@ export interface GraphAlgorithmAdapter {
   contractVersion: '2.0'
   title: string
   intro: string
+  guide: string
   warning?: string
   inputWarning: (edges: readonly GraphEdge[]) => string | undefined
   pseudocode: AlgorithmAdapter['pseudocode']
@@ -73,6 +74,7 @@ export const breadthFirstAdapter: GraphAlgorithmAdapter = {
   contractVersion: '2.0',
   title: 'Breadth-First Search',
   intro: 'Watch breadth-first search discover, visit, and finish nodes in queue order.',
+  guide: 'Frontier: queue. Parent links form the search tree. Choose a destination to reconstruct a fewest-edge path.',
   pseudocode: BFS_LINES,
   complexity: [
     { label: 'Time', value: 'O(V + E)', explanation: 'Each reachable node and edge is examined.' },
@@ -118,12 +120,19 @@ export const breadthFirstAdapter: GraphAlgorithmAdapter = {
       : bfsResult?.pathFound === false ? ' Fewest-edge path: none.' : ''
     const completion = unreachable === undefined ? '' : ` Unreachable nodes: ${unreachable.join(', ') || 'none'}.`
     const unexploredDescription = unexplored === undefined ? '' : ` Unexplored nodes: ${unexplored.join(', ') || 'none'}.`
-    const description = `${nodeStates.join(', ')}. Queue: ${bfsState?.queue.join(', ') || 'empty'}. Traversal order: ${bfsState?.traversalOrder.join(', ') || 'empty'}. Examined edge: ${examinedEdge}. Parents: ${parents.join(', ') || 'none'}.${pathDescription}${completion}${unexploredDescription}`
+    const description = `${nodeStates.join(', ')}. Queue: ${bfsState?.queue.join(', ') || 'empty'}. Traversal order: ${bfsState?.traversalOrder.join(', ') || 'empty'}. Examined edge: ${examinedEdge}. Search tree: ${parents.join(', ') || 'none'}.${pathDescription}${completion}${unexploredDescription}`
     const treeEdges = Object.entries(bfsState?.parents ?? {}).map(([child, parent]) => ({ from: child, to: parent }))
     const currentEdge = bfsState?.examinedEdge ?? null
     return {
       title: 'Breadth-first traversal graph',
       description,
+      statusKey: [
+        { label: 'unreached', symbol: '○', style: 'unreached' },
+        { label: 'discovered', symbol: '+', style: 'discovered' },
+        { label: 'active', symbol: '▶', style: 'active' },
+        { label: 'processed', symbol: '✓', style: 'processed' },
+      ],
+      selectedPathLabel: 'Fewest-edge path',
       nodes: Object.fromEntries(nodes.map(node => {
         const status = bfsState?.nodeStatuses[node] ?? 'UNREACHED'
         return [node, { label: statusLabel[status], symbol: statusSymbol[status], style: status.toLowerCase() }]
@@ -135,7 +144,7 @@ export const breadthFirstAdapter: GraphAlgorithmAdapter = {
         { label: 'Queue', value: bfsState?.queue.join(' → ') || 'Empty' },
         { label: 'Traversal order', value: bfsState?.traversalOrder.join(' → ') || 'Empty' },
         { label: 'Node states', value: nodeStates.join('; ') },
-        { label: 'Parents', value: parents.join('; ') || 'None' },
+        { label: 'Search tree', value: parents.join('; ') || 'None' },
         { label: 'Examined edge', value: examinedEdge === 'none' ? 'None' : examinedEdge },
         ...(bfsResult?.pathFound === undefined ? [] : [{ label: 'Fewest-edge path', value: selectedPath.join(' → ') || 'None' }]),
         ...(unreachable === undefined ? [] : [{ label: 'Unreachable nodes', value: unreachable.join(' → ') || 'None' }]),
@@ -180,6 +189,7 @@ export const depthFirstAdapter: GraphAlgorithmAdapter = {
   contractVersion: '2.0',
   title: 'Depth-First Search',
   intro: 'Watch iterative depth-first search discover, visit, and finish nodes using an explicit stack.',
+  guide: 'Frontier: stack, shown top first. Parent links form the search tree. DFS reports traversal order and does not use a destination.',
   pseudocode: DFS_LINES,
   complexity: [
     { label: 'Time', value: 'O(V + E)', explanation: 'Each reachable node and edge is examined.' },
@@ -218,10 +228,16 @@ export const depthFirstAdapter: GraphAlgorithmAdapter = {
     const examinedEdge = dfsState?.examinedEdge ? `${dfsState.examinedEdge.from}–${dfsState.examinedEdge.to}` : 'none'
     const unreachableNodes = dfsResult?.unreachableNodes
     const completion = unreachableNodes === undefined ? '' : ` Unreachable nodes: ${unreachableNodes.join(', ') || 'none'}.`
-    const description = `${nodeStates.join(', ')}. Stack (top first): ${dfsState?.stack.join(', ') || 'empty'}. Traversal order: ${dfsState?.traversalOrder.join(', ') || 'empty'}. Examined edge: ${examinedEdge}. Parents: ${parents.join(', ') || 'none'}.${completion}`
+    const description = `${nodeStates.join(', ')}. Stack (top first): ${dfsState?.stack.join(', ') || 'empty'}. Traversal order: ${dfsState?.traversalOrder.join(', ') || 'empty'}. Examined edge: ${examinedEdge}. Search tree: ${parents.join(', ') || 'none'}.${completion}`
     return {
       title: 'Depth-first traversal graph',
       description,
+      statusKey: [
+        { label: 'unreached', symbol: '○', style: 'unreached' },
+        { label: 'discovered', symbol: '+', style: 'discovered' },
+        { label: 'active', symbol: '▶', style: 'active' },
+        { label: 'processed', symbol: '✓', style: 'processed' },
+      ],
       nodes: Object.fromEntries(nodes.map(node => {
         const status = dfsState?.nodeStatuses[node] ?? 'UNREACHED'
         return [node, { label: statusLabel[status], symbol: statusSymbol[status], style: status.toLowerCase() }]
@@ -233,7 +249,7 @@ export const depthFirstAdapter: GraphAlgorithmAdapter = {
         { label: 'Stack (top first)', value: dfsState?.stack.join(' → ') || 'Empty' },
         { label: 'Traversal order', value: dfsState?.traversalOrder.join(' → ') || 'Empty' },
         { label: 'Node states', value: nodeStates.join('; ') },
-        { label: 'Parents', value: parents.join('; ') || 'None' },
+        { label: 'Search tree', value: parents.join('; ') || 'None' },
         { label: 'Examined edge', value: examinedEdge === 'none' ? 'None' : examinedEdge },
         ...(unreachableNodes === undefined ? [] : [{ label: 'Unreachable nodes', value: unreachableNodes.join(' → ') || 'None' }]),
       ],
@@ -288,6 +304,7 @@ export const dijkstraAdapter: GraphAlgorithmAdapter = {
   contractVersion: '2.0',
   title: "Dijkstra's Algorithm",
   intro: 'Watch Dijkstra settle the lowest-cost frontier and build a minimum-cost route.',
+  guide: 'Frontier: priority ordered by tentative distance. Parent links form the search tree. A destination is required for the minimum-cost path.',
   pseudocode: DIJKSTRA_LINES,
   complexity: [
     { label: 'Time', value: 'O((V + E) log V)', explanation: 'Priority-frontier operations add a logarithmic factor.' },
@@ -335,10 +352,17 @@ export const dijkstraAdapter: GraphAlgorithmAdapter = {
     const pathDescription = pathResult === undefined ? '' : pathResult.pathFound
       ? ` Minimum-cost path: ${selectedPath.join(' → ')}; total cost ${pathResult.totalCost}.`
       : ' Minimum-cost path: none.'
-    const description = `${nodeStates.join(', ')}. Priority frontier: ${frontier.join(', ') || 'empty'}. Tentative distances: ${distances.join(', ')}. Examined edge: ${examinedEdge}. Parents: ${parents.join(', ') || 'none'}.${pathDescription}`
+    const description = `${nodeStates.join(', ')}. Priority frontier: ${frontier.join(', ') || 'empty'}. Tentative distances: ${distances.join(', ')}. Examined edge: ${examinedEdge}. Search tree: ${parents.join(', ') || 'none'}.${pathDescription}`
     return {
       title: 'Dijkstra pathfinding graph',
       description,
+      statusKey: [
+        { label: 'unreached', symbol: '○', style: 'unreached' },
+        { label: 'frontier', symbol: '+', style: 'discovered' },
+        { label: 'active', symbol: '▶', style: 'active' },
+        { label: 'settled', symbol: '✓', style: 'processed' },
+      ],
+      selectedPathLabel: 'Minimum-cost path',
       nodes: Object.fromEntries(nodes.map(node => {
         const status = pathState?.nodeStatuses[node] ?? 'UNREACHED'
         const style = status === 'FRONTIER' ? 'discovered' : status === 'SETTLED' ? 'processed' : status.toLowerCase()
@@ -351,7 +375,7 @@ export const dijkstraAdapter: GraphAlgorithmAdapter = {
         { label: 'Priority frontier', value: frontier.join(' → ') || 'Empty' },
         { label: 'Tentative distances', value: distances.join('; ') },
         { label: 'Node states', value: nodeStates.join('; ') },
-        { label: 'Parents', value: parents.join('; ') || 'None' },
+        { label: 'Search tree', value: parents.join('; ') || 'None' },
         { label: 'Examined edge', value: examinedEdge === 'none' ? 'None' : examinedEdge },
         ...(pathResult === undefined ? [] : [{ label: 'Minimum-cost path', value: selectedPath.join(' → ') || 'None' }]),
         ...(pathResult?.totalCost === undefined ? [] : [{ label: 'Total cost', value: String(pathResult.totalCost) }]),

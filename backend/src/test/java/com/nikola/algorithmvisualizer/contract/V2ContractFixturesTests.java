@@ -24,19 +24,28 @@ class V2ContractFixturesTests {
         JsonNode fixture = readFixture(CONTRACT_FIXTURE);
 
         assertThat(textValues(fixture.path("catalog"), "family"))
-                .containsExactly("SORTING", "GRAPH_TRAVERSAL");
+                .containsExactly("SORTING", "GRAPH_TRAVERSAL", "GRAPH_TRAVERSAL", "PATHFINDING");
         assertThat(textValues(fixture.path("catalog"), "contractVersion"))
                 .containsOnly("2.0");
         assertThat(fixture.at("/requests/sorting/kind").asText()).isEqualTo("SORTING");
         assertThat(fixture.at("/requests/graphTraversal/kind").asText()).isEqualTo("GRAPH_TRAVERSAL");
+        assertThat(fixture.at("/requests/targetedBfs/kind").asText()).isEqualTo("GRAPH_TRAVERSAL");
+        assertThat(fixture.at("/requests/pathfinding/kind").asText()).isEqualTo("PATHFINDING");
         assertThat(fixture.at("/results/sorting/kind").asText()).isEqualTo("SORTING");
         assertThat(fixture.at("/results/graphTraversal/kind").asText()).isEqualTo("GRAPH_TRAVERSAL");
+        assertThat(fixture.at("/results/pathfinding/kind").asText()).isEqualTo("PATHFINDING");
         assertThat(fixture.at("/states/sorting/kind").asText()).isEqualTo("SORTING");
         assertThat(fixture.at("/states/graphTraversal/kind").asText()).isEqualTo("GRAPH_TRAVERSAL");
+        assertThat(fixture.at("/states/depthFirst/kind").asText()).isEqualTo("GRAPH_TRAVERSAL");
+        assertThat(fixture.at("/states/pathfinding/kind").asText()).isEqualTo("PATHFINDING");
 
         assertEventDiscriminators(fixture.path("events").path("sorting"), "COMPARE", "SORTING");
         assertEventDiscriminators(
                 fixture.path("events").path("graphTraversal"), "NODE_DISCOVERED", "GRAPH_TRAVERSAL");
+        assertEventDiscriminators(
+                fixture.path("events").path("depthFirst"), "NODE_POPPED", "GRAPH_TRAVERSAL");
+        assertEventDiscriminators(
+                fixture.path("events").path("pathfinding"), "DISTANCE_UPDATED", "PATHFINDING");
     }
 
     @Test
@@ -44,15 +53,33 @@ class V2ContractFixturesTests {
         JsonNode catalog = readFixture(CONTRACT_FIXTURE).path("catalog");
         JsonNode sorting = catalog.get(0).path("constraints");
         JsonNode graph = catalog.get(1).path("constraints");
+        JsonNode pathfinding = catalog.get(3).path("constraints");
 
         assertThat(fieldNames(sorting)).containsExactlyInAnyOrder(
                 "kind", "minimumValues", "maximumValues", "minimumValue", "maximumValue");
         assertThat(fieldNames(graph)).containsExactlyInAnyOrder(
                 "kind", "minimumNodes", "maximumNodes", "maximumEdges",
                 "nodeLabelPattern", "directed", "weighted", "minimumWeight", "maximumWeight");
+        assertThat(fieldNames(pathfinding)).containsExactlyInAnyOrder(
+                "kind", "minimumNodes", "maximumNodes", "maximumEdges", "nodeLabelPattern",
+                "directed", "weighted", "minimumWeight", "maximumWeight", "unweightedEdgeCost",
+                "destinationRequired");
         assertThat(fieldNames(sorting)).doesNotContainAnyElementsOf(fieldNames(graph).stream()
                 .filter(field -> !field.equals("kind"))
                 .toList());
+        assertThat(pathfinding.path("unweightedEdgeCost").asInt()).isEqualTo(1);
+        assertThat(pathfinding.path("destinationRequired").asBoolean()).isTrue();
+    }
+
+    @Test
+    void preservesWeightedEdgeOmissionAndDestinationCapabilities() throws IOException {
+        JsonNode fixture = readFixture(CONTRACT_FIXTURE);
+        JsonNode weightedEdges = fixture.at("/requests/weightedGraphTraversal/edges");
+
+        assertThat(weightedEdges.get(0).path("weight").asInt()).isEqualTo(1);
+        assertThat(weightedEdges.get(1).has("weight")).isFalse();
+        assertThat(fixture.at("/requests/targetedBfs/destination").asText()).isEqualTo("B");
+        assertThat(fixture.at("/requests/pathfinding/destination").asText()).isEqualTo("B");
     }
 
     @Test

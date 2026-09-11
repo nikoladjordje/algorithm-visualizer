@@ -52,7 +52,7 @@ describe('GraphVisualizer', () => {
 
   it('renders deterministic labeled nodes with non-color status cues', () => {
     const { container, rerender } = render(<GraphVisualizer nodes={nodes} edges={edges} presentation={breadthFirstAdapter.present(nodes, state)} />)
-    const graph = screen.getByRole('img', { name: /A: processed.*Queue: C.*Examined edge: B–C.*Parents: B from A, C from B/i })
+    const graph = screen.getByRole('img', { name: /A: processed.*Queue: C.*Examined edge: B–C.*Search tree: B from A, C from B/i })
     for (const [node, status] of [['A','processed'],['B','active'],['C','discovered'],['D','unreached']]) {
       expect(within(graph).getByRole('group', { name: `${node}, ${status}` })).toBeInTheDocument()
     }
@@ -111,7 +111,7 @@ describe('GraphVisualizer', () => {
       presentation={breadthFirstAdapter.present(nodes, selectedState, targetedResult)} />)
 
     expect(container.querySelectorAll('.graph-edge--selected-path')).toHaveLength(2)
-    expect(screen.getByText('Fewest-edge path')).toBeInTheDocument()
+    expect(screen.getAllByText('Fewest-edge path')).toHaveLength(2)
     expect(screen.getByText('A → B → C')).toBeInTheDocument()
     expect((await axe(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toHaveLength(0)
   })

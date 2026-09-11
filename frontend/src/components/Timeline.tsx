@@ -31,7 +31,7 @@ export function Timeline({ position, eventCount, disabled, onChange }: TimelineP
         max={Math.max(0, eventCount)}
         value={position}
         disabled={disabled}
-        aria-valuetext={position === 0 ? 'Initial array' : `Step ${position} of ${eventCount}`}
+        aria-valuetext={position === 0 ? 'Before first step' : `Step ${position} of ${eventCount}`}
         onChange={(event) => onChange(Number(event.target.value))}
         onKeyDown={handleKeyDown}
       />

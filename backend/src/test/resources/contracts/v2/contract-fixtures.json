@@ -29,6 +29,42 @@
         "minimumWeight": 1,
         "maximumWeight": 99
       }
+    },
+    {
+      "id": "dfs",
+      "name": "Depth-First Search",
+      "family": "GRAPH_TRAVERSAL",
+      "contractVersion": "2.0",
+      "constraints": {
+        "kind": "GRAPH_TRAVERSAL",
+        "minimumNodes": 1,
+        "maximumNodes": 12,
+        "maximumEdges": 66,
+        "nodeLabelPattern": "^[A-Za-z0-9_-]{1,16}$",
+        "directed": false,
+        "weighted": true,
+        "minimumWeight": 1,
+        "maximumWeight": 99
+      }
+    },
+    {
+      "id": "dijkstra",
+      "name": "Dijkstra's Algorithm",
+      "family": "PATHFINDING",
+      "contractVersion": "2.0",
+      "constraints": {
+        "kind": "PATHFINDING",
+        "minimumNodes": 1,
+        "maximumNodes": 12,
+        "maximumEdges": 66,
+        "nodeLabelPattern": "^[A-Za-z0-9_-]{1,16}$",
+        "directed": false,
+        "weighted": true,
+        "minimumWeight": 1,
+        "maximumWeight": 99,
+        "unweightedEdgeCost": 1,
+        "destinationRequired": true
+      }
     }
   ],
   "requests": {
@@ -41,6 +77,26 @@
       "nodes": ["A", "B"],
       "edges": [{"from": "A", "to": "B"}],
       "startNode": "A"
+    },
+    "weightedGraphTraversal": {
+      "kind": "GRAPH_TRAVERSAL",
+      "nodes": ["A", "B", "C"],
+      "edges": [{"from": "A", "to": "B", "weight": 1}, {"from": "B", "to": "C"}],
+      "startNode": "A"
+    },
+    "targetedBfs": {
+      "kind": "GRAPH_TRAVERSAL",
+      "nodes": ["A", "B"],
+      "edges": [{"from": "A", "to": "B"}],
+      "startNode": "A",
+      "destination": "B"
+    },
+    "pathfinding": {
+      "kind": "PATHFINDING",
+      "nodes": ["A", "B"],
+      "edges": [{"from": "A", "to": "B", "weight": 7}],
+      "startNode": "A",
+      "destination": "B"
     }
   },
   "results": {
@@ -56,6 +112,19 @@
       "visitedNodeCount": 2,
       "edgeExaminationCount": 2,
       "maximumQueueSize": 1
+    },
+    "pathfinding": {
+      "kind": "PATHFINDING",
+      "pathFound": true,
+      "path": ["A", "B"],
+      "totalCost": 7,
+      "settledOrder": ["A", "B"],
+      "parents": {"B": "A"},
+      "settledNodeCount": 2,
+      "relaxationAttemptCount": 1,
+      "successfulUpdateCount": 1,
+      "rejectedUpdateCount": 0,
+      "maximumFrontierSize": 1
     }
   },
   "states": {
@@ -71,6 +140,22 @@
       "traversalOrder": ["A"],
       "parents": {"B": "A"},
       "examinedEdge": {"from": "A", "to": "B"}
+    },
+    "depthFirst": {
+      "kind": "GRAPH_TRAVERSAL",
+      "nodeStatuses": {"A": "ACTIVE", "B": "DISCOVERED"},
+      "stack": ["B"],
+      "traversalOrder": ["A"],
+      "parents": {"B": "A"},
+      "examinedEdge": {"from": "A", "to": "B"}
+    },
+    "pathfinding": {
+      "kind": "PATHFINDING",
+      "nodeStatuses": {"A": "SETTLED", "B": "FRONTIER"},
+      "tentativeDistances": {"A": 0, "B": 7},
+      "parents": {"B": "A"},
+      "frontier": [{"node": "B", "distance": 7}],
+      "examinedEdge": {"from": "A", "to": "B", "weight": 7}
     }
   },
   "events": {
@@ -106,6 +191,40 @@
         "kind": "NODE_DISCOVERED",
         "node": "B",
         "parent": "A"
+      }
+    },
+    "depthFirst": {
+      "sequence": 2,
+      "type": "NODE_POPPED",
+      "pseudocodeLineId": "dfs-pop",
+      "state": {
+        "kind": "GRAPH_TRAVERSAL",
+        "nodeStatuses": {"A": "ACTIVE"},
+        "stack": [],
+        "traversalOrder": ["A"],
+        "parents": {},
+        "examinedEdge": null
+      },
+      "data": {"kind": "NODE_POPPED", "node": "A"}
+    },
+    "pathfinding": {
+      "sequence": 5,
+      "type": "DISTANCE_UPDATED",
+      "pseudocodeLineId": "dijkstra-update-distance",
+      "state": {
+        "kind": "PATHFINDING",
+        "nodeStatuses": {"A": "SETTLED", "B": "FRONTIER"},
+        "tentativeDistances": {"A": 0, "B": 7},
+        "parents": {"B": "A"},
+        "frontier": [{"node": "B", "distance": 7}],
+        "examinedEdge": {"from": "A", "to": "B", "weight": 7}
+      },
+      "data": {
+        "kind": "DISTANCE_UPDATED",
+        "node": "B",
+        "parent": "A",
+        "previousDistance": null,
+        "newDistance": 7
       }
     }
   },

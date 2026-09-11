@@ -1,0 +1,224 @@
+{
+  "unweightedBfs": {
+    "algorithm": "bfs",
+    "request": {
+      "kind": "GRAPH_TRAVERSAL",
+      "nodes": ["A", "B"],
+      "edges": [{"from": "A", "to": "B"}],
+      "startNode": "A"
+    },
+    "result": {
+      "kind": "GRAPH_TRAVERSAL",
+      "traversalOrder": ["A", "B"],
+      "parents": {"B": "A"},
+      "unreachableNodes": [],
+      "visitedNodeCount": 2,
+      "edgeExaminationCount": 2,
+      "maximumQueueSize": 1
+    },
+    "events": [
+      "TRAVERSAL_INITIALIZED|bfs-initialize",
+      "NODE_DEQUEUED|bfs-dequeue",
+      "EDGE_EXAMINED|bfs-examine-edge",
+      "NODE_DISCOVERED|bfs-enqueue-neighbor",
+      "NODE_COMPLETED|bfs-complete-node",
+      "NODE_DEQUEUED|bfs-dequeue",
+      "EDGE_EXAMINED|bfs-examine-edge",
+      "ALREADY_DISCOVERED_SKIPPED|bfs-skip-neighbor",
+      "NODE_COMPLETED|bfs-complete-node",
+      "TRAVERSAL_COMPLETED|bfs-complete-traversal"
+    ]
+  },
+  "iterativeDfs": {
+    "algorithm": "dfs",
+    "request": {
+      "kind": "GRAPH_TRAVERSAL",
+      "nodes": ["A", "C", "B"],
+      "edges": [{"from": "A", "to": "B", "weight": 9}, {"from": "A", "to": "C"}],
+      "startNode": "A"
+    },
+    "result": {
+      "kind": "GRAPH_TRAVERSAL",
+      "traversalOrder": ["A", "C", "B"],
+      "parents": {"B": "A", "C": "A"},
+      "unreachableNodes": [],
+      "visitedNodeCount": 3,
+      "edgeExaminationCount": 4,
+      "maximumStackSize": 2
+    },
+    "events": [
+      "TRAVERSAL_INITIALIZED|dfs-initialize",
+      "NODE_POPPED|dfs-pop",
+      "EDGE_EXAMINED|dfs-examine-edge",
+      "NODE_DISCOVERED|dfs-push-neighbor",
+      "EDGE_EXAMINED|dfs-examine-edge",
+      "NODE_DISCOVERED|dfs-push-neighbor",
+      "NODE_COMPLETED|dfs-complete-node",
+      "NODE_POPPED|dfs-pop",
+      "EDGE_EXAMINED|dfs-examine-edge",
+      "ALREADY_DISCOVERED_SKIPPED|dfs-skip-neighbor",
+      "NODE_COMPLETED|dfs-complete-node",
+      "NODE_POPPED|dfs-pop",
+      "EDGE_EXAMINED|dfs-examine-edge",
+      "ALREADY_DISCOVERED_SKIPPED|dfs-skip-neighbor",
+      "NODE_COMPLETED|dfs-complete-node",
+      "TRAVERSAL_COMPLETED|dfs-complete-traversal"
+    ]
+  },
+  "targetedBfs": {
+    "algorithm": "bfs",
+    "request": {
+      "kind": "GRAPH_TRAVERSAL",
+      "nodes": ["A", "B", "C"],
+      "edges": [{"from": "A", "to": "B", "weight": 8}, {"from": "A", "to": "C", "weight": 1}],
+      "startNode": "A",
+      "destination": "B"
+    },
+    "result": {
+      "kind": "GRAPH_TRAVERSAL",
+      "traversalOrder": ["A", "B"],
+      "parents": {"B": "A", "C": "A"},
+      "unreachableNodes": [],
+      "visitedNodeCount": 2,
+      "edgeExaminationCount": 2,
+      "maximumQueueSize": 2,
+      "pathFound": true,
+      "path": ["A", "B"],
+      "pathEdgeCount": 1,
+      "unexploredNodes": ["C"]
+    },
+    "events": [
+      "TRAVERSAL_INITIALIZED|bfs-initialize",
+      "NODE_DEQUEUED|bfs-dequeue",
+      "EDGE_EXAMINED|bfs-examine-edge",
+      "NODE_DISCOVERED|bfs-enqueue-neighbor",
+      "EDGE_EXAMINED|bfs-examine-edge",
+      "NODE_DISCOVERED|bfs-enqueue-neighbor",
+      "NODE_COMPLETED|bfs-complete-node",
+      "NODE_DEQUEUED|bfs-dequeue",
+      "PATH_RECONSTRUCTED|bfs-reconstruct-path"
+    ]
+  },
+  "dijkstraSuccess": {
+    "algorithm": "dijkstra",
+    "request": {
+      "kind": "PATHFINDING",
+      "nodes": ["A", "B", "D"],
+      "edges": [{"from": "A", "to": "D", "weight": 9}, {"from": "A", "to": "B", "weight": 2}, {"from": "B", "to": "D", "weight": 2}],
+      "startNode": "A",
+      "destination": "D"
+    },
+    "result": {
+      "kind": "PATHFINDING",
+      "pathFound": true,
+      "path": ["A", "B", "D"],
+      "totalCost": 4,
+      "settledOrder": ["A", "B", "D"],
+      "parents": {"B": "A", "D": "B"},
+      "settledNodeCount": 3,
+      "relaxationAttemptCount": 4,
+      "successfulUpdateCount": 3,
+      "rejectedUpdateCount": 1,
+      "maximumFrontierSize": 2
+    },
+    "events": [
+      "PATHFINDING_INITIALIZED|dijkstra-initialize",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "DISTANCE_UPDATED|dijkstra-update-distance",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "DISTANCE_UPDATED|dijkstra-update-distance",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "RELAXATION_REJECTED|dijkstra-reject-relaxation",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "DISTANCE_UPDATED|dijkstra-update-distance",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "PATH_RECONSTRUCTED|dijkstra-reconstruct-path"
+    ]
+  },
+  "dijkstraTie": {
+    "algorithm": "dijkstra",
+    "request": {
+      "kind": "PATHFINDING",
+      "nodes": ["A", "C", "B", "D"],
+      "edges": [{"from": "A", "to": "B", "weight": 1}, {"from": "B", "to": "D", "weight": 1}, {"from": "A", "to": "C", "weight": 1}, {"from": "C", "to": "D", "weight": 1}],
+      "startNode": "A",
+      "destination": "D"
+    },
+    "result": {
+      "kind": "PATHFINDING",
+      "pathFound": true,
+      "path": ["A", "C", "D"],
+      "totalCost": 2,
+      "settledOrder": ["A", "C", "B", "D"],
+      "parents": {"C": "A", "B": "A", "D": "C"},
+      "settledNodeCount": 4,
+      "relaxationAttemptCount": 6,
+      "successfulUpdateCount": 3,
+      "rejectedUpdateCount": 3,
+      "maximumFrontierSize": 2
+    },
+    "events": [
+      "PATHFINDING_INITIALIZED|dijkstra-initialize",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "DISTANCE_UPDATED|dijkstra-update-distance",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "DISTANCE_UPDATED|dijkstra-update-distance",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "RELAXATION_REJECTED|dijkstra-reject-relaxation",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "DISTANCE_UPDATED|dijkstra-update-distance",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "RELAXATION_REJECTED|dijkstra-reject-relaxation",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "RELAXATION_REJECTED|dijkstra-reject-relaxation",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "PATH_RECONSTRUCTED|dijkstra-reconstruct-path"
+    ]
+  },
+  "dijkstraNoPath": {
+    "algorithm": "dijkstra",
+    "request": {
+      "kind": "PATHFINDING",
+      "nodes": ["A", "B", "Z"],
+      "edges": [{"from": "A", "to": "B"}],
+      "startNode": "A",
+      "destination": "Z"
+    },
+    "result": {
+      "kind": "PATHFINDING",
+      "pathFound": false,
+      "path": [],
+      "settledOrder": ["A", "B"],
+      "parents": {"B": "A"},
+      "settledNodeCount": 2,
+      "relaxationAttemptCount": 2,
+      "successfulUpdateCount": 1,
+      "rejectedUpdateCount": 1,
+      "maximumFrontierSize": 1
+    },
+    "events": [
+      "PATHFINDING_INITIALIZED|dijkstra-initialize",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "DISTANCE_UPDATED|dijkstra-update-distance",
+      "NODE_SELECTED|dijkstra-select-node",
+      "NODE_SETTLED|dijkstra-settle-node",
+      "EDGE_EXAMINED|dijkstra-examine-edge",
+      "RELAXATION_REJECTED|dijkstra-reject-relaxation",
+      "PATH_RECONSTRUCTED|dijkstra-reconstruct-path"
+    ]
+  }
+}

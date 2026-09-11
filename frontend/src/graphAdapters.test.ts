@@ -30,13 +30,13 @@ describe('BFS adapter', () => {
   it('preserves queue order, graph annotations, and complete accessible state without mutating snapshots', () => {
     const original = structuredClone(state)
     const presentation = adapter.present(['A', 'B', 'C', 'D'], state, result)
-    expect(presentation.description).toBe('A: processed, B: active, C: discovered, D: unreached. Queue: C. Traversal order: A, B. Examined edge: B–C. Parents: B from A, C from B. Unreachable nodes: D.')
+    expect(presentation.description).toBe('A: processed, B: active, C: discovered, D: unreached. Queue: C. Traversal order: A, B. Examined edge: B–C. Search tree: B from A, C from B. Unreachable nodes: D.')
     expect(presentation.treeEdges).toEqual([{ from: 'B', to: 'A' }, { from: 'C', to: 'B' }])
     expect(presentation.examinedEdge).toEqual({ from: 'B', to: 'C' })
     expect(presentation.rows.slice(0, 2)).toEqual([
       { label: 'Queue', value: 'C' }, { label: 'Traversal order', value: 'A → B' },
     ])
-    expect(adapter.present(['A']).description).toBe('A: unreached. Queue: empty. Traversal order: empty. Examined edge: none. Parents: none.')
+    expect(adapter.present(['A']).description).toBe('A: unreached. Queue: empty. Traversal order: empty. Examined edge: none. Search tree: none.')
     expect(adapter.present(['A'], { ...state, queue: ['C', 'B'] }).rows[0].value).toBe('C → B')
     expect(state).toEqual(original)
   })
@@ -167,7 +167,7 @@ describe('DFS adapter', () => {
     expect(depthFirstAdapter.inputWarning([{ from: 'A', to: 'C', weight: 7 }]))
       .toBe('Depth-first search ignores edge weights; they do not affect traversal order.')
     expect(depthFirstAdapter.presets.map(preset => preset.label))
-      .toEqual(['Branching', 'Cycle', 'Disconnected'])
+      .toEqual(['DFS depth', 'Cycle', 'Disconnected', 'Edges vs cost', 'Mixed weights', 'Equal-cost tie', 'Unreachable destination'])
     expect(connectedState).toEqual(original)
   })
 })

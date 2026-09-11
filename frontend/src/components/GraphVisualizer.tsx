@@ -5,6 +5,8 @@ import type { GraphEdge } from '../types'
 export interface GraphPresentation {
   title: string
   description: string
+  statusKey: { label: string; symbol: string; style: string }[]
+  selectedPathLabel?: string
   nodes: Record<string, { label: string; symbol: string; style: string }>
   treeEdges: GraphEdge[]
   selectedPathEdges: GraphEdge[]
@@ -56,6 +58,14 @@ export function GraphVisualizer({ nodes, edges, presentation }: Props) {
       })}
     </svg>
     </div>
+    <ul className="graph-key" aria-label="Graph visual key">
+      {presentation.statusKey.map(status => <li key={status.label}>
+        <span className={`graph-key-node graph-node--${status.style}`} aria-hidden="true">{status.symbol}</span>{status.label}
+      </li>)}
+      <li><span className="graph-key-edge graph-key-edge--tree" aria-hidden="true"/>Search tree</li>
+      <li><span className="graph-key-edge graph-key-edge--examined" aria-hidden="true"/>Examined edge</li>
+      {presentation.selectedPathLabel && <li><span className="graph-key-edge graph-key-edge--selected-path" aria-hidden="true"/>{presentation.selectedPathLabel}</li>}
+    </ul>
     <dl className="graph-state" aria-label="Graph state">
       {presentation.rows.map(row => <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
       {weighted && <div><dt>Edge weights</dt><dd>{edges.map(edge => `${edge.from}–${edge.to}: ${edge.weight ?? 'unweighted'}`).join('; ')}</dd></div>}

@@ -57,7 +57,7 @@ describe('App algorithm workbench',()=>{
   await user.click(screen.getByRole('button', { name: 'Reset' }))
   fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-B' } })
   expect(screen.getByText(/ignores edge weights/)).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: 'Branching' }))
+  await user.click(screen.getByRole('button', { name: 'DFS depth' }))
   expect(screen.queryByText(/ignores edge weights/)).not.toBeInTheDocument()
   fireEvent.change(screen.getByLabelText('Graph input'), { target: { value: 'A-B:0' } })
   await user.click(screen.getByRole('button', { name: 'Visualize' }))
@@ -73,7 +73,7 @@ describe('App algorithm workbench',()=>{
 
  it('authors a connected graph and submits its derived order and selected start',async()=>{const graphCatalog={id:'bfs',name:'Breadth-First Search',family:'GRAPH_TRAVERSAL',contractVersion:'2.0',constraints:{kind:'GRAPH_TRAVERSAL',minimumNodes:1,maximumNodes:12,maximumEdges:66,nodeLabelPattern:'^[A-Za-z0-9_-]{1,16}$',directed:false,weighted:false}};const graphTrace={apiVersion:'2.0',algorithm:{id:'bfs',name:'Breadth-First Search',family:'GRAPH_TRAVERSAL'},input:{kind:'GRAPH_TRAVERSAL',nodes:['A','C','B','node-one'],edges:[{from:'A',to:'C'},{from:'A',to:'B'},{from:'node-one',to:'C'}],startNode:'C'},result:{kind:'GRAPH_TRAVERSAL',traversalOrder:['C','A','node-one','B'],parents:{A:'C','node-one':'C',B:'A'},unreachableNodes:[],visitedNodeCount:4,edgeExaminationCount:6,maximumQueueSize:2},limits:{maximumEvents:10000},events:[]};const fetchMock=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>(void init,new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?[...catalog,graphCatalog]:graphTrace),{status:200,headers:{'Content-Type':'application/json'}})));vi.stubGlobal('fetch',fetchMock);const user=userEvent.setup();render(<App/>);await user.selectOptions(await screen.findByLabelText('Algorithm'),'bfs');fireEvent.change(screen.getByLabelText('Graph input'),{target:{value:'A-C\nA-B\n"node-one" - C'}});const start=screen.getByLabelText('Start node');expect(Array.from((start as HTMLSelectElement).options).map(option=>option.textContent)).toEqual(['A','C','B','node-one']);await user.selectOptions(start,'C');await user.click(screen.getByRole('button',{name:'Visualize'}));await waitFor(()=>expect(fetchMock).toHaveBeenCalledTimes(2));expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({kind:'GRAPH_TRAVERSAL',nodes:['A','C','B','node-one'],edges:[{from:'A',to:'C'},{from:'A',to:'B'},{from:'node-one',to:'C'}],startNode:'C'});const graph=await screen.findByRole('img',{name:/Breadth-first traversal graph/});for(const node of ['A','C','B','node-one'])expect(within(graph).getByText(node)).toBeInTheDocument();const edges=graph.querySelectorAll('line');expect(edges).toHaveLength(3);for(const edge of edges)expect(edge).toHaveAttribute('stroke')})
 
- it('applies fixed graph presets without executing',async()=>{vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}})));const user=userEvent.setup();render(<App/>);await user.selectOptions(await screen.findByLabelText('Algorithm'),'bfs');await user.click(screen.getByRole('button',{name:'Branching'}));expect(screen.getByLabelText('Graph input')).toHaveValue('A-B\nA-C\nB-D\nB-E\nC-F');expect(screen.getByLabelText('Start node')).toHaveValue('A');expect(fetch).toHaveBeenCalledOnce();await user.click(screen.getByRole('button',{name:'Disconnected'}));expect(screen.getByLabelText('Graph input')).toHaveValue('A-B\nB-C\nD-E\nF');expect(screen.getByLabelText('Start node')).toHaveValue('A');expect(fetch).toHaveBeenCalledOnce()})
+ it('applies comparison presets with their destinations without executing',async()=>{vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}})));const user=userEvent.setup();render(<App/>);await user.selectOptions(await screen.findByLabelText('Algorithm'),'bfs');const preset=screen.getByRole('button',{name:'Edges vs cost'});expect(preset).toHaveAttribute('title',expect.stringContaining('one-edge path'));await user.click(preset);expect(screen.getByLabelText('Graph input')).toHaveValue('A-D:9\nA-B:2\nB-C\nC-D:2');expect(screen.getByLabelText('Start node')).toHaveValue('A');expect(screen.getByLabelText('Destination')).toHaveValue('D');expect(fetch).toHaveBeenCalledOnce();await user.click(screen.getByRole('button',{name:'Unreachable destination'}));expect(screen.getByLabelText('Graph input')).toHaveValue('A-B\nC-D:5');expect(screen.getByLabelText('Destination')).toHaveValue('D');expect(fetch).toHaveBeenCalledOnce()})
 
  it('retains separate family drafts and clears run state on algorithm changes',async()=>{vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?fullCatalog:trace),{status:200,headers:{'Content-Type':'application/json'}})));const user=userEvent.setup();render(<App/>);const algorithm=await screen.findByLabelText('Algorithm');const array=screen.getByLabelText('Array values');await user.clear(array);await user.type(array,'9, 4');await user.click(screen.getByRole('button',{name:'Visualize'}));await screen.findByRole('img');await user.selectOptions(algorithm,'bfs');expect(screen.queryByRole('img')).not.toBeInTheDocument();expect(screen.getByText('Ready')).toBeInTheDocument();fireEvent.change(screen.getByLabelText('Graph input'),{target:{value:'X-Y\nZ'}});await user.selectOptions(screen.getByLabelText('Start node'),'Y');await user.selectOptions(algorithm,'selection');expect(screen.getByLabelText('Array values')).toHaveValue('9, 4');await user.selectOptions(algorithm,'bfs');expect(screen.getByLabelText('Graph input')).toHaveValue('X-Y\nZ');expect(screen.getByLabelText('Start node')).toHaveValue('Y');expect(fetch).toHaveBeenCalledTimes(2)})
 
@@ -128,6 +128,68 @@ describe('App algorithm workbench',()=>{
   expect(screen.getByLabelText('Destination')).toHaveValue('')
  })
 
+ it('reuses one weighted experiment across BFS, DFS, and Dijkstra while clearing the old run', async () => {
+  const graphTrace = {
+   apiVersion: '2.0', algorithm: { id: 'bfs', name: 'Breadth-First Search', family: 'GRAPH_TRAVERSAL' },
+   input: { kind: 'GRAPH_TRAVERSAL', nodes: ['A', 'D', 'B', 'C'], edges: [{ from: 'A', to: 'D', weight: 9 }, { from: 'A', to: 'B', weight: 2 }, { from: 'B', to: 'C' }, { from: 'C', to: 'D', weight: 2 }], startNode: 'A', destination: 'D' },
+   result: { kind: 'GRAPH_TRAVERSAL', traversalOrder: ['A', 'D'], parents: { D: 'A' }, unreachableNodes: [], pathFound: true, path: ['A', 'D'], pathEdgeCount: 1, unexploredNodes: ['B', 'C'], visitedNodeCount: 2, edgeExaminationCount: 2, maximumQueueSize: 2 },
+   limits: { maximumEvents: 10000 }, events: [],
+  }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+   void init
+   return new Response(JSON.stringify(
+    String(input).endsWith('/api/v2/algorithms') ? [...fullCatalog, dfsCatalog] : graphTrace,
+   ), { headers: { 'Content-Type': 'application/json' } })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  const algorithm = await screen.findByLabelText('Algorithm')
+  await user.selectOptions(algorithm, 'bfs')
+  await user.click(screen.getByRole('button', { name: 'Edges vs cost' }))
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+  expect(await screen.findByRole('img', { name: /Breadth-first traversal graph/ })).toBeInTheDocument()
+
+  await user.selectOptions(algorithm, 'dijkstra')
+  expect(screen.getByLabelText('Graph input')).toHaveValue('A-D:9\nA-B:2\nB-C\nC-D:2')
+  expect(screen.getByLabelText('Start node')).toHaveValue('A')
+  expect(screen.getByLabelText('Destination')).toHaveValue('D')
+  expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  expect(screen.getByText('Ready')).toBeInTheDocument()
+  expect(screen.getByText(/priority ordered by tentative distance/i)).toBeInTheDocument()
+
+  await user.selectOptions(algorithm, 'dfs')
+  expect(screen.queryByLabelText('Destination')).not.toBeInTheDocument()
+  expect(screen.getByText(/DFS reports traversal order and does not use a destination/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+  expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({
+   kind: 'GRAPH_TRAVERSAL', nodes: ['A', 'D', 'B', 'C'],
+   edges: [{ from: 'A', to: 'D', weight: 9 }, { from: 'A', to: 'B', weight: 2 }, { from: 'B', to: 'C' }, { from: 'C', to: 'D', weight: 2 }],
+   startNode: 'A',
+  })
+  await user.selectOptions(algorithm, 'bfs')
+  expect(screen.getByLabelText('Destination')).toHaveValue('D')
+ })
+
+ it('keeps graph authoring and playback controls in keyboard order', async () => {
+  history.replaceState(null, '', '/?algorithm=bfs')
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(fullCatalog), {
+   headers: { 'Content-Type': 'application/json' },
+  })))
+  const user = userEvent.setup()
+  render(<App />)
+  await waitFor(() => expect(screen.getByLabelText('Algorithm')).toHaveValue('bfs'))
+  await user.tab()
+  expect(screen.getByLabelText('Algorithm')).toHaveFocus()
+  await user.tab()
+  expect(screen.getByLabelText('Graph input')).toHaveFocus()
+  await user.tab()
+  expect(screen.getByRole('button', { name: 'Visualize' })).toHaveFocus()
+  await user.tab()
+  expect(screen.getByRole('button', { name: 'DFS depth' })).toHaveFocus()
+ })
+
  it('requires a Dijkstra destination and plays the complete minimum-cost path', async () => {
   const pathTrace = {
    apiVersion: '2.0', algorithm: { id: 'dijkstra', name: "Dijkstra's Algorithm", family: 'PATHFINDING' },
@@ -163,11 +225,14 @@ describe('App algorithm workbench',()=>{
   expect(screen.getByText('Minimum-cost path found: A → B → C → D (total cost 5).')).toBeInTheDocument()
   expect(screen.getByText('A: 0; D: 5; B: 2; C: 3')).toBeInTheDocument()
   expect(container.querySelectorAll('.graph-edge--selected-path')).toHaveLength(3)
+  expect(screen.getAllByRole('status')).toEqual(expect.arrayContaining([
+   expect.objectContaining({ textContent: 'Dijkstra pathfinding complete.' }),
+  ]))
  })
 
  it('selects either family from the URL without encoding drafts',async()=>{history.replaceState(null,'','/?algorithm=bfs');vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}})));render(<App/>);await waitFor(()=>expect(screen.getByLabelText('Algorithm')).toHaveValue('bfs'));expect(screen.getByLabelText('Graph input')).toHaveValue('A');expect(location.search).toBe('?algorithm=bfs');expect(fetch).toHaveBeenCalledOnce()})
 
- it('cancels an in-flight trace and ignores its stale response after switching families',async()=>{let resolveTrace!:(response:Response)=>void;const pending=new Promise<Response>(resolve=>{resolveTrace=resolve});let traceSignal:AbortSignal|undefined;const fetchMock=vi.fn((input:RequestInfo|URL,init?:RequestInit)=>{if(String(input).endsWith('/api/v2/algorithms'))return Promise.resolve(new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}}));traceSignal=init?.signal as AbortSignal;return pending});vi.stubGlobal('fetch',fetchMock);const user=userEvent.setup();render(<App/>);const algorithm=await screen.findByLabelText('Algorithm');await user.selectOptions(algorithm,'bfs');await user.click(screen.getByRole('button',{name:'Visualize'}));expect(screen.getByRole('button',{name:'Building…'})).toBeDisabled();await user.selectOptions(algorithm,'insertion');expect(traceSignal?.aborted).toBe(true);resolveTrace(new Response(JSON.stringify({apiVersion:'2.0',algorithm:{family:'GRAPH_TRAVERSAL'},events:[]}),{status:200,headers:{'Content-Type':'application/json'}}));await waitFor(()=>expect(screen.getByLabelText('Array values')).toBeInTheDocument());expect(screen.queryByRole('img',{name:/Breadth-first traversal graph/})).not.toBeInTheDocument();expect(screen.getByText('Ready')).toBeInTheDocument()})
+ it('cancels an in-flight trace and ignores its stale response across graph API families',async()=>{let resolveTrace!:(response:Response)=>void;const pending=new Promise<Response>(resolve=>{resolveTrace=resolve});let traceSignal:AbortSignal|undefined;const fetchMock=vi.fn((input:RequestInfo|URL,init?:RequestInit)=>{if(String(input).endsWith('/api/v2/algorithms'))return Promise.resolve(new Response(JSON.stringify(fullCatalog),{status:200,headers:{'Content-Type':'application/json'}}));traceSignal=init?.signal as AbortSignal;return pending});vi.stubGlobal('fetch',fetchMock);const user=userEvent.setup();render(<App/>);const algorithm=await screen.findByLabelText('Algorithm');await user.selectOptions(algorithm,'bfs');await user.click(screen.getByRole('button',{name:'Visualize'}));expect(screen.getByRole('button',{name:'Building…'})).toBeDisabled();await user.selectOptions(algorithm,'dijkstra');expect(traceSignal?.aborted).toBe(true);resolveTrace(new Response(JSON.stringify({apiVersion:'2.0',algorithm:{family:'GRAPH_TRAVERSAL'},events:[]}),{status:200,headers:{'Content-Type':'application/json'}}));await waitFor(()=>expect(screen.getByLabelText('Destination')).toBeInTheDocument());expect(screen.queryByRole('img',{name:/Breadth-first traversal graph/})).not.toBeInTheDocument();expect(screen.getByText('Ready')).toBeInTheDocument()})
 
  it('runs and plays the complete single-node DFS experience', async () => {
   const dfsTrace = {
