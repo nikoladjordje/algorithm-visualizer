@@ -35,6 +35,15 @@ class AlgorithmControllerTests {
     }
 
     @Test
+    void rejectsALinearSearchRequestFromAnotherFamily() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/linear-search/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"SORTING\",\"values\":[4],\"target\":4}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ALGORITHM_FAMILY_MISMATCH"));
+    }
+
+    @Test
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())

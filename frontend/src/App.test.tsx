@@ -12,6 +12,28 @@ const trace={apiVersion:'2.0',algorithm:{id:'insertion',name:'Insertion Sort',fa
 beforeEach(()=>{history.replaceState(null,'','/');vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?catalog:trace),{status:200,headers:{'Content-Type':'application/json'}})))})
 afterEach(()=>vi.unstubAllGlobals())
 describe('App algorithm workbench',()=>{
+ it('runs linear search with a retained search draft and indexed playback state', async () => {
+  const searchCatalog = { id: 'linear-search', name: 'Linear Search', family: 'SEARCH', contractVersion: '2.0', constraints: { kind: 'SEARCH', minimumValues: 0, maximumValues: 50, minimumValue: -2147483648, maximumValue: 2147483647, requiresNonDecreasingValues: false } }
+  const searchTrace = { apiVersion: '2.0', algorithm: { id: 'linear-search', name: 'Linear Search', family: 'SEARCH' }, input: { kind: 'SEARCH', values: [8, 3, 5], target: 5 }, result: { kind: 'SEARCH', found: true, foundIndex: 2, comparisons: 3 }, limits: { maximumEvents: 10000 }, events: [{ sequence: 1, type: 'SEARCH_INITIALIZED', pseudocodeLineId: 'linear-initialize', state: { kind: 'SEARCH', values: [8, 3, 5], target: 5, inspectedIndices: [] }, data: { kind: 'SEARCH_INITIALIZED' } }, { sequence: 2, type: 'CANDIDATE_SELECTED', pseudocodeLineId: 'linear-select', state: { kind: 'SEARCH', values: [8, 3, 5], target: 5, selectedIndex: 0, inspectedIndices: [] }, data: { kind: 'CANDIDATE_SELECTED', index: 0, value: 8 } }, { sequence: 3, type: 'TARGET_COMPARED', pseudocodeLineId: 'linear-compare', state: { kind: 'SEARCH', values: [8, 3, 5], target: 5, selectedIndex: 0, inspectedIndices: [0] }, data: { kind: 'TARGET_COMPARED', index: 0, value: 8, found: false } }, { sequence: 4, type: 'CANDIDATE_SELECTED', pseudocodeLineId: 'linear-select', state: { kind: 'SEARCH', values: [8, 3, 5], target: 5, selectedIndex: 1, inspectedIndices: [0] }, data: { kind: 'CANDIDATE_SELECTED', index: 1, value: 3 } }, { sequence: 5, type: 'TARGET_COMPARED', pseudocodeLineId: 'linear-compare', state: { kind: 'SEARCH', values: [8, 3, 5], target: 5, selectedIndex: 1, inspectedIndices: [0, 1] }, data: { kind: 'TARGET_COMPARED', index: 1, value: 3, found: false } }, { sequence: 6, type: 'CANDIDATE_SELECTED', pseudocodeLineId: 'linear-select', state: { kind: 'SEARCH', values: [8, 3, 5], target: 5, selectedIndex: 2, inspectedIndices: [0, 1] }, data: { kind: 'CANDIDATE_SELECTED', index: 2, value: 5 } }, { sequence: 7, type: 'TARGET_COMPARED', pseudocodeLineId: 'linear-compare', state: { kind: 'SEARCH', values: [8, 3, 5], target: 5, selectedIndex: 2, inspectedIndices: [0, 1, 2] }, data: { kind: 'TARGET_COMPARED', index: 2, value: 5, found: true } }, { sequence: 8, type: 'SEARCH_FOUND', pseudocodeLineId: 'linear-found', state: { kind: 'SEARCH', values: [8, 3, 5], target: 5, selectedIndex: 2, inspectedIndices: [0, 1, 2] }, data: { kind: 'SEARCH_FOUND', index: 2, value: 5, found: true } }] }
+  const fetchMock = vi.fn(async (request: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(request).endsWith('/api/v2/algorithms') ? [...catalog, searchCatalog] : searchTrace), { headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'linear-search')
+  await user.clear(screen.getByLabelText('Search values'))
+  await user.type(screen.getByLabelText('Search values'), '8, 3, 5')
+  await user.clear(screen.getByLabelText('Target'))
+  await user.type(screen.getByLabelText('Target'), '5')
+  await user.click(screen.getByRole('button', { name: 'Visualize' }))
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'SEARCH', values: [8, 3, 5], target: 5 })
+  expect(await screen.findByRole('img', { name: /Search values by index/ })).toBeInTheDocument()
+  for (let step = 0; step < 4; step++) await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('candidate')).toBeInTheDocument()
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'insertion')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'linear-search')
+  expect(screen.getByLabelText('Search values')).toHaveValue('8, 3, 5')
+  expect(screen.getByLabelText('Target')).toHaveValue('5')
+ })
  it.each([false, true])('filters incompatible adapters on catalog load and retry (%s)', async retry => {
   history.replaceState(null, '', '/?algorithm=dfs')
   const entries = [

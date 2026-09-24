@@ -66,6 +66,44 @@ h2 { margin: 5px 0 7px; color: var(--ink); font-size: 25px; letter-spacing: -.03
 .chart-annotations { top: 12px; }
 .buffer-row { top: 42px; }
 .chart { position: relative; }
+.search-visualizer {
+  min-height: 350px;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  overflow-x: auto;
+  border: 1px solid #e3e0d8;
+  background: #f5f2eb;
+}
+.search-cells {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.search-cell {
+  min-width: 86px;
+  display: grid;
+  gap: 7px;
+  align-content: center;
+  padding: 14px 10px;
+  color: var(--ink);
+  border: 3px solid #7d847f;
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, #e5e2db 0 7px, #f5f2eb 7px 11px);
+  text-align: center;
+}
+.search-cell--inspected { border-style: dashed; }
+.search-cell--candidate { border-color: #9b721b; border-width: 5px; background: #f3d99d; transform: translateY(-5px); }
+.search-cell--found { border-color: var(--green); background: #acd1c0; }
+.search-cell__value { font: 600 22px 'DM Mono', monospace; }
+.search-cell__index, .search-cell__state { color: var(--muted); font: 10px 'DM Mono', monospace; text-transform: uppercase; }
+.search-cell__state { color: var(--green); }
+.search-empty { color: var(--muted); font: 14px 'DM Mono', monospace; }
 .graph-visualizer { min-height: 350px; border: 1px solid #e3e0d8; background: #f5f2eb; }
 .graph-visualizer svg { display: block; width: 100%; height: 360px; }
 .graph-visualizer text { fill: var(--ink); font: 600 20px 'DM Mono', monospace; }
