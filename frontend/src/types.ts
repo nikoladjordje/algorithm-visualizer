@@ -243,8 +243,13 @@ export interface PathfindingCatalogEntry {
     destinationRequired: true
   }
 }
-export type AlgorithmCatalogEntry = SortingAlgorithmCatalogEntry | GraphAlgorithmCatalogEntry | PathfindingCatalogEntry
-export type VisualizerTrace = AlgorithmTrace | GraphAlgorithmTrace
+export interface SearchCatalogEntry { id: 'linear-search'; name: 'Linear Search'; family: 'SEARCH'; contractVersion: '2.0'; constraints: { kind: 'SEARCH'; minimumValues: 0; maximumValues: 50; minimumValue: number; maximumValue: number; requiresNonDecreasingValues: false } }
+export interface SearchState { kind: 'SEARCH'; values: number[]; target: number; selectedIndex?: number; inspectedIndices: number[] }
+export type SearchEventType = 'SEARCH_INITIALIZED' | 'CANDIDATE_SELECTED' | 'TARGET_COMPARED' | 'SEARCH_FOUND' | 'SEARCH_NOT_FOUND'
+export interface SearchEvent { sequence: number; type: SearchEventType; pseudocodeLineId: string; state: SearchState; data: { kind: SearchEventType; index?: number; value?: number; found?: boolean } }
+export interface SearchTrace { apiVersion: '2.0'; algorithm: { id: 'linear-search'; name: 'Linear Search'; family: 'SEARCH' }; input: { kind: 'SEARCH'; values: number[]; target: number }; result: { kind: 'SEARCH'; found: boolean; foundIndex?: number; comparisons: number }; limits: { maximumEvents: number }; events: SearchEvent[] }
+export type AlgorithmCatalogEntry = SortingAlgorithmCatalogEntry | GraphAlgorithmCatalogEntry | PathfindingCatalogEntry | SearchCatalogEntry
+export type VisualizerTrace = AlgorithmTrace | GraphAlgorithmTrace | SearchTrace
 
 export type MetricType = 'COMPARISONS' | 'READS' | 'WRITES' | 'SWAPS'
 export interface ProblemDetail { type: string; title: string; status: number; detail: string; instance: string; code: string; field?: string }

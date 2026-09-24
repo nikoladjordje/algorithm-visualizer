@@ -18,12 +18,14 @@ final class V2Contracts {
     }
 
     sealed interface Constraints permits SortingConstraints, GraphTraversalConstraints,
-            PathfindingConstraints {
+            PathfindingConstraints, SearchConstraints {
         String kind();
     }
 
     record SortingConstraints(String kind, int minimumValues, int maximumValues,
             int minimumValue, int maximumValue) implements Constraints { }
+    record SearchConstraints(String kind, int minimumValues, int maximumValues,
+            int minimumValue, int maximumValue, boolean requiresNonDecreasingValues) implements Constraints { }
 
     record GraphTraversalConstraints(String kind, int minimumNodes, int maximumNodes,
             int maximumEdges, String nodeLabelPattern, boolean directed, boolean weighted,
@@ -49,6 +51,10 @@ final class V2Contracts {
             values = List.copyOf(values);
         }
     }
+    record SearchInput(String kind, List<Integer> values, int target) { SearchInput { values = List.copyOf(values); } }
+    record SearchTrace(String apiVersion, AlgorithmInfo algorithm, SearchInput input,
+            com.nikola.algorithmvisualizer.search.LinearSearchAlgorithm.Result result, Limits limits,
+            List<com.nikola.algorithmvisualizer.search.LinearSearchAlgorithm.Event> events) { SearchTrace { events = List.copyOf(events); } }
 
     record Limits(int maximumEvents) {
     }

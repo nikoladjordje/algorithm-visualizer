@@ -19,10 +19,26 @@ class AlgorithmControllerTests {
     private MockMvc mockMvc;
 
     @Test
+    void runsLinearSearchWithSeparateSelectionAndComparisonSteps() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/linear-search/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"SEARCH\",\"values\":[4,-2,4],\"target\":4}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.algorithm.family").value("SEARCH"))
+                .andExpect(jsonPath("$.input.values[1]").value(-2))
+                .andExpect(jsonPath("$.result.found").value(true))
+                .andExpect(jsonPath("$.result.foundIndex").value(0))
+                .andExpect(jsonPath("$.result.comparisons").value(1))
+                .andExpect(jsonPath("$.events[1].type").value("CANDIDATE_SELECTED"))
+                .andExpect(jsonPath("$.events[2].type").value("TARGET_COMPARED"))
+                .andExpect(jsonPath("$.events[3].type").value("SEARCH_FOUND"));
+    }
+
+    @Test
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(9))
+                .andExpect(jsonPath("$.length()").value(10))
                 .andExpect(jsonPath("$[0].id").value("insertion"))
                 .andExpect(jsonPath("$[1].id").value("selection"))
                 .andExpect(jsonPath("$[2].id").value("bubble"))
@@ -57,10 +73,10 @@ class AlgorithmControllerTests {
     void runsSingleNodeBreadthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(9))
-                .andExpect(jsonPath("$[6].id").value("bfs"))
-                .andExpect(jsonPath("$[6].family").value("GRAPH_TRAVERSAL"))
-                .andExpect(jsonPath("$[6].constraints.kind").value("GRAPH_TRAVERSAL"));
+                .andExpect(jsonPath("$.length()").value(10))
+                .andExpect(jsonPath("$[7].id").value("bfs"))
+                .andExpect(jsonPath("$[7].family").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$[7].constraints.kind").value("GRAPH_TRAVERSAL"));
 
         mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -93,12 +109,12 @@ class AlgorithmControllerTests {
     void runsSingleNodeIterativeDepthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(9))
-                .andExpect(jsonPath("$[7].id").value("dfs"))
-                .andExpect(jsonPath("$[7].family").value("GRAPH_TRAVERSAL"))
-                .andExpect(jsonPath("$[7].constraints.kind").value("GRAPH_TRAVERSAL"))
-                .andExpect(jsonPath("$[7].constraints.maximumNodes").value(12))
-                .andExpect(jsonPath("$[7].constraints.maximumEdges").value(66));
+                .andExpect(jsonPath("$.length()").value(10))
+                .andExpect(jsonPath("$[8].id").value("dfs"))
+                .andExpect(jsonPath("$[8].family").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$[8].constraints.kind").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$[8].constraints.maximumNodes").value(12))
+                .andExpect(jsonPath("$[8].constraints.maximumEdges").value(66));
 
         mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -269,14 +285,14 @@ class AlgorithmControllerTests {
     void advertisesAndRunsDijkstraThroughThePathfindingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[8].id").value("dijkstra"))
-                .andExpect(jsonPath("$[8].family").value("PATHFINDING"))
-                .andExpect(jsonPath("$[8].constraints.kind").value("PATHFINDING"))
-                .andExpect(jsonPath("$[8].constraints.weighted").value(true))
-                .andExpect(jsonPath("$[8].constraints.minimumWeight").value(1))
-                .andExpect(jsonPath("$[8].constraints.maximumWeight").value(99))
-                .andExpect(jsonPath("$[8].constraints.unweightedEdgeCost").value(1))
-                .andExpect(jsonPath("$[8].constraints.destinationRequired").value(true));
+                .andExpect(jsonPath("$[9].id").value("dijkstra"))
+                .andExpect(jsonPath("$[9].family").value("PATHFINDING"))
+                .andExpect(jsonPath("$[9].constraints.kind").value("PATHFINDING"))
+                .andExpect(jsonPath("$[9].constraints.weighted").value(true))
+                .andExpect(jsonPath("$[9].constraints.minimumWeight").value(1))
+                .andExpect(jsonPath("$[9].constraints.maximumWeight").value(99))
+                .andExpect(jsonPath("$[9].constraints.unweightedEdgeCost").value(1))
+                .andExpect(jsonPath("$[9].constraints.destinationRequired").value(true));
 
         mockMvc.perform(post("/api/v2/algorithms/dijkstra/trace")
                         .contentType(MediaType.APPLICATION_JSON)

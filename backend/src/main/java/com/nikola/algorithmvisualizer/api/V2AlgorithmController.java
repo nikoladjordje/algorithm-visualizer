@@ -16,6 +16,7 @@ import com.nikola.algorithmvisualizer.algorithm.AlgorithmRegistry;
 import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
+import com.nikola.algorithmvisualizer.search.LinearSearchAlgorithm;
 import com.nikola.algorithmvisualizer.trace.CompareData;
 import com.nikola.algorithmvisualizer.trace.EventData;
 import com.nikola.algorithmvisualizer.trace.HeapData;
@@ -40,19 +41,22 @@ public class V2AlgorithmController {
     private static final String SORTING = "SORTING";
     private static final String GRAPH_TRAVERSAL = "GRAPH_TRAVERSAL";
     private static final String PATHFINDING = "PATHFINDING";
+    private static final String SEARCH = "SEARCH";
     private static final int MAXIMUM_EVENTS = 10_000;
     private final AlgorithmRegistry registry;
     private final BreadthFirstSearchAlgorithm breadthFirstSearch;
     private final IterativeDepthFirstSearchAlgorithm depthFirstSearch;
     private final DijkstraPathfindingAlgorithm dijkstraPathfinding;
+    private final LinearSearchAlgorithm linearSearch;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
-            DijkstraPathfindingAlgorithm dijkstraPathfinding) {
+            DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
         this.dijkstraPathfinding = dijkstraPathfinding;
+        this.linearSearch = linearSearch;
     }
 
     @GetMapping
@@ -63,6 +67,8 @@ public class V2AlgorithmController {
                                 Integer.MIN_VALUE, Integer.MAX_VALUE)))
                 .toList();
         var catalog = new java.util.ArrayList<>(sorting);
+        catalog.add(new V2Contracts.CatalogEntry("linear-search", "Linear Search", SEARCH, "2.0",
+                new V2Contracts.SearchConstraints(SEARCH, 0, 50, Integer.MIN_VALUE, Integer.MAX_VALUE, false)));
         catalog.add(new V2Contracts.CatalogEntry("bfs", "Breadth-First Search", GRAPH_TRAVERSAL, "2.0",
                 new V2Contracts.GraphTraversalConstraints(GRAPH_TRAVERSAL, 1, 12, 66,
                         "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99)));
@@ -102,6 +108,14 @@ public class V2AlgorithmController {
                     new V2Contracts.GraphTraversalInput(GRAPH_TRAVERSAL, request.nodes(), request.edges(),
                             request.startNode(), request.destination()),
                     graphTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), graphTrace.events());
+        }
+        if ("linear-search".equals(algorithmId)) {
+            if (!SEARCH.equals(request.kind())) throw new AlgorithmFamilyMismatchException(algorithmId, SEARCH);
+            validateSearch(request);
+            var searchTrace = linearSearch.execute(request.values(), request.target());
+            return new V2Contracts.SearchTrace("2.0", new V2Contracts.AlgorithmInfo("linear-search", "Linear Search", SEARCH),
+                    new V2Contracts.SearchInput(SEARCH, request.values(), request.target()), searchTrace.result(),
+                    new V2Contracts.Limits(MAXIMUM_EVENTS), searchTrace.events());
         }
         if ("dfs".equals(algorithmId)) {
             if (!GRAPH_TRAVERSAL.equals(request.kind())) {
@@ -200,6 +214,11 @@ public class V2AlgorithmController {
             }
         }
     }
+    private static void validateSearch(V2Request request) {
+        if (request.values() == null || request.values().size() > 50 || request.values().stream().anyMatch(java.util.Objects::isNull))
+            throw new IllegalArgumentException("Provide between 0 and 50 signed 32-bit integer values");
+        if (request.target() == null) throw new IllegalArgumentException("Provide a signed 32-bit integer target");
+    }
 
     private static V2Contracts.SortingEvent toV2Event(SemanticEvent<?> event) {
         return new V2Contracts.SortingEvent(event.sequence(), event.type().name(),
@@ -251,6 +270,6 @@ public class V2AlgorithmController {
         throw new IllegalArgumentException("Unsupported sorting event data: " + data.getClass().getName());
     }
 
-    public record V2Request(String kind, List<Integer> values, List<String> nodes,
+    public record V2Request(String kind, List<Integer> values, Integer target, List<String> nodes,
             List<V2Contracts.GraphEdge> edges, String startNode, String destination) { }
 }

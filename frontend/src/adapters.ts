@@ -15,3 +15,10 @@ export const adapters:Record<string,AlgorithmAdapter>={
  merge:make('merge','Merge Sort',['split-range','begin-merge','compare-halves','move-to-buffer','write-merged','complete-merge'],['O(n log n)','O(n log n)','O(n log n)','O(n)'],['COMPARISONS','WRITES']),
  quick:make('quick','Quick Sort',['select-pivot','scan-partition','compare-pivot','swap-partition','write-swap','partition-complete'],['O(n log n)','O(n log n)','O(n²)','O(log n)'],['COMPARISONS','WRITES','SWAPS'],{warning:'A deterministic last-element pivot makes sorted and reverse-sorted inputs degrade to quadratic time.'}),
  heap:make('heap','Heap Sort',['build-heap','select-root','heapify','compare-child','swap-heap','write-swap','shrink-heap','complete-heap'],['O(n log n)','O(n log n)','O(n log n)','O(1)'],['COMPARISONS','WRITES','SWAPS'])}
+
+export const linearSearchAdapter: AlgorithmAdapter = {
+ id:'linear-search', title:'Linear Search', intro:'Inspect each authored value from left to right until the first match.',
+ pseudocode:[{id:'linear-initialize',text:'start with the first index'},{id:'linear-select',text:'select the next candidate'},{id:'linear-compare',text:'compare candidate with target'},{id:'linear-found',text:'return the matching index'},{id:'linear-not-found',text:'report not found'}],
+ complexity:complexity('O(1)','O(n)','O(n)','O(1)'), presets, metrics:['COMPARISONS'],
+ explain:genericExplain, indices, annotations,
+}

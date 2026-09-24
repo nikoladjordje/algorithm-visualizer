@@ -1,4 +1,4 @@
-import { adapters } from './adapters'
+import { adapters, linearSearchAdapter } from './adapters'
 import type { AlgorithmAdapter } from './adapters'
 import { graphAdapters } from './graphAdapters'
 import type { GraphAlgorithmAdapter } from './graphAdapters'
@@ -6,6 +6,7 @@ import type { AlgorithmCatalogEntry } from './types'
 
 export type AlgorithmCapability =
   | { family: 'SORTING'; adapter: AlgorithmAdapter }
+  | { family: 'SEARCH'; adapter: AlgorithmAdapter }
   | { family: 'GRAPH_TRAVERSAL'; adapter: GraphAlgorithmAdapter }
   | { family: 'PATHFINDING'; adapter: GraphAlgorithmAdapter }
 
@@ -14,6 +15,7 @@ export function resolveAlgorithmAdapter(entry?: AlgorithmCatalogEntry): Algorith
   if (entry.family === 'SORTING' && Object.hasOwn(adapters, entry.id)) {
     return { family: 'SORTING', adapter: adapters[entry.id] }
   }
+  if (entry.family === 'SEARCH' && entry.id === 'linear-search') return { family: 'SEARCH', adapter: linearSearchAdapter }
   const adapter = graphAdapters.get(entry.id)
   if (adapter && entry.family === adapter.family && entry.contractVersion === adapter.contractVersion) {
     return { family: adapter.family, adapter }
