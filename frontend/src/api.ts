@@ -56,8 +56,8 @@ export async function createAlgorithmTrace(algorithmId:string, values: number[],
 }
 
 export function createInsertionSortTrace(values:number[]):Promise<AlgorithmTrace>{ return createAlgorithmTrace('insertion',values) }
-export async function createSearchTrace(values: number[], target: number, signal?: AbortSignal): Promise<SearchTrace> {
-  return requestTrace('/api/v2/algorithms/linear-search/trace', { kind: 'SEARCH', values, target }, signal) as unknown as Promise<SearchTrace>
+export async function createSearchTrace(algorithmId: 'linear-search' | 'binary-search', values: number[], target: number, signal?: AbortSignal): Promise<SearchTrace> {
+  return requestTrace(`/api/v2/algorithms/${algorithmId}/trace`, { kind: 'SEARCH', values, target }, signal) as unknown as Promise<SearchTrace>
 }
 
 export async function createGraphTraversalTrace(

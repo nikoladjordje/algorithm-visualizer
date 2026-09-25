@@ -17,6 +17,7 @@ import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.search.LinearSearchAlgorithm;
+import com.nikola.algorithmvisualizer.search.BinarySearchAlgorithm;
 import com.nikola.algorithmvisualizer.trace.CompareData;
 import com.nikola.algorithmvisualizer.trace.EventData;
 import com.nikola.algorithmvisualizer.trace.HeapData;
@@ -48,15 +49,18 @@ public class V2AlgorithmController {
     private final IterativeDepthFirstSearchAlgorithm depthFirstSearch;
     private final DijkstraPathfindingAlgorithm dijkstraPathfinding;
     private final LinearSearchAlgorithm linearSearch;
+    private final BinarySearchAlgorithm binarySearch;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
-            DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch) {
+            DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch,
+            BinarySearchAlgorithm binarySearch) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
         this.dijkstraPathfinding = dijkstraPathfinding;
         this.linearSearch = linearSearch;
+        this.binarySearch = binarySearch;
     }
 
     @GetMapping
@@ -69,6 +73,8 @@ public class V2AlgorithmController {
         var catalog = new java.util.ArrayList<>(sorting);
         catalog.add(new V2Contracts.CatalogEntry("linear-search", "Linear Search", SEARCH, "2.0",
                 new V2Contracts.SearchConstraints(SEARCH, 0, 50, Integer.MIN_VALUE, Integer.MAX_VALUE, false)));
+        catalog.add(new V2Contracts.CatalogEntry("binary-search", "Binary Search", SEARCH, "2.0",
+                new V2Contracts.SearchConstraints(SEARCH, 0, 50, Integer.MIN_VALUE, Integer.MAX_VALUE, true)));
         catalog.add(new V2Contracts.CatalogEntry("bfs", "Breadth-First Search", GRAPH_TRAVERSAL, "2.0",
                 new V2Contracts.GraphTraversalConstraints(GRAPH_TRAVERSAL, 1, 12, 66,
                         "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99)));
@@ -114,6 +120,21 @@ public class V2AlgorithmController {
             validateSearch(request);
             var searchTrace = linearSearch.execute(request.values(), request.target());
             return new V2Contracts.SearchTrace("2.0", new V2Contracts.AlgorithmInfo("linear-search", "Linear Search", SEARCH),
+                    new V2Contracts.SearchInput(SEARCH, request.values(), request.target()), searchTrace.result(),
+                    new V2Contracts.Limits(MAXIMUM_EVENTS), searchTrace.events());
+        }
+        if ("binary-search".equals(algorithmId)) {
+            if (!SEARCH.equals(request.kind())) throw new AlgorithmFamilyMismatchException(algorithmId, SEARCH);
+            validateSearch(request);
+            for (int index = 1; index < request.values().size(); index++) {
+                if (request.values().get(index - 1) > request.values().get(index)) {
+                    throw new GraphValidationException("values[" + index + "]",
+                            "Binary search requires values in non-decreasing order; indices "
+                                    + (index - 1) + " and " + index + " are inverted");
+                }
+            }
+            var searchTrace = binarySearch.execute(request.values(), request.target());
+            return new V2Contracts.SearchTrace("2.0", new V2Contracts.AlgorithmInfo("binary-search", "Binary Search", SEARCH),
                     new V2Contracts.SearchInput(SEARCH, request.values(), request.target()), searchTrace.result(),
                     new V2Contracts.Limits(MAXIMUM_EVENTS), searchTrace.events());
         }

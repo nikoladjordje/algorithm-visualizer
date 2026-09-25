@@ -44,10 +44,34 @@ class AlgorithmControllerTests {
     }
 
     @Test
+    void runsBinarySearchWithInclusiveIntervalsAndRejectsAnInversion() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[7].id").value("binary-search"))
+                .andExpect(jsonPath("$[7].constraints.requiresNonDecreasingValues").value(true));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"SEARCH\",\"values\":[1,3,5,7],\"target\":7}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.foundIndex").value(3))
+                .andExpect(jsonPath("$.events[0].state.lowerBound").value(0))
+                .andExpect(jsonPath("$.events[0].state.upperBound").value(3))
+                .andExpect(jsonPath("$.events[3].type").value("SEARCH_INTERVAL_NARROWED"))
+                .andExpect(jsonPath("$.events[3].state.lowerBound").value(2));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"SEARCH\",\"values\":[1,5,3],\"target\":3}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("values[2]"));
+    }
+
+    @Test
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(10))
+                .andExpect(jsonPath("$.length()").value(11))
                 .andExpect(jsonPath("$[0].id").value("insertion"))
                 .andExpect(jsonPath("$[1].id").value("selection"))
                 .andExpect(jsonPath("$[2].id").value("bubble"))
@@ -82,10 +106,10 @@ class AlgorithmControllerTests {
     void runsSingleNodeBreadthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(10))
-                .andExpect(jsonPath("$[7].id").value("bfs"))
-                .andExpect(jsonPath("$[7].family").value("GRAPH_TRAVERSAL"))
-                .andExpect(jsonPath("$[7].constraints.kind").value("GRAPH_TRAVERSAL"));
+                .andExpect(jsonPath("$.length()").value(11))
+                .andExpect(jsonPath("$[8].id").value("bfs"))
+                .andExpect(jsonPath("$[8].family").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$[8].constraints.kind").value("GRAPH_TRAVERSAL"));
 
         mockMvc.perform(post("/api/v2/algorithms/bfs/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,12 +142,12 @@ class AlgorithmControllerTests {
     void runsSingleNodeIterativeDepthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(10))
-                .andExpect(jsonPath("$[8].id").value("dfs"))
-                .andExpect(jsonPath("$[8].family").value("GRAPH_TRAVERSAL"))
-                .andExpect(jsonPath("$[8].constraints.kind").value("GRAPH_TRAVERSAL"))
-                .andExpect(jsonPath("$[8].constraints.maximumNodes").value(12))
-                .andExpect(jsonPath("$[8].constraints.maximumEdges").value(66));
+                .andExpect(jsonPath("$.length()").value(11))
+                .andExpect(jsonPath("$[9].id").value("dfs"))
+                .andExpect(jsonPath("$[9].family").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$[9].constraints.kind").value("GRAPH_TRAVERSAL"))
+                .andExpect(jsonPath("$[9].constraints.maximumNodes").value(12))
+                .andExpect(jsonPath("$[9].constraints.maximumEdges").value(66));
 
         mockMvc.perform(post("/api/v2/algorithms/dfs/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -294,14 +318,14 @@ class AlgorithmControllerTests {
     void advertisesAndRunsDijkstraThroughThePathfindingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[9].id").value("dijkstra"))
-                .andExpect(jsonPath("$[9].family").value("PATHFINDING"))
-                .andExpect(jsonPath("$[9].constraints.kind").value("PATHFINDING"))
-                .andExpect(jsonPath("$[9].constraints.weighted").value(true))
-                .andExpect(jsonPath("$[9].constraints.minimumWeight").value(1))
-                .andExpect(jsonPath("$[9].constraints.maximumWeight").value(99))
-                .andExpect(jsonPath("$[9].constraints.unweightedEdgeCost").value(1))
-                .andExpect(jsonPath("$[9].constraints.destinationRequired").value(true));
+                .andExpect(jsonPath("$[10].id").value("dijkstra"))
+                .andExpect(jsonPath("$[10].family").value("PATHFINDING"))
+                .andExpect(jsonPath("$[10].constraints.kind").value("PATHFINDING"))
+                .andExpect(jsonPath("$[10].constraints.weighted").value(true))
+                .andExpect(jsonPath("$[10].constraints.minimumWeight").value(1))
+                .andExpect(jsonPath("$[10].constraints.maximumWeight").value(99))
+                .andExpect(jsonPath("$[10].constraints.unweightedEdgeCost").value(1))
+                .andExpect(jsonPath("$[10].constraints.destinationRequired").value(true));
 
         mockMvc.perform(post("/api/v2/algorithms/dijkstra/trace")
                         .contentType(MediaType.APPLICATION_JSON)

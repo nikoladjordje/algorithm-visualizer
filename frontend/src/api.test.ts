@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createDepthFirstSearchTrace, createDijkstraTrace, createGraphTraversalTrace, createInsertionSortTrace } from './api'
+import { createDepthFirstSearchTrace, createDijkstraTrace, createGraphTraversalTrace, createInsertionSortTrace, createSearchTrace } from './api'
 import type { AlgorithmTrace, ProblemDetail } from './types'
 
 const trace: AlgorithmTrace = {
@@ -126,6 +126,23 @@ describe('createDijkstraTrace', () => {
     await expect(createDijkstraTrace(graph)).resolves.toEqual(pathTrace)
     expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/dijkstra/trace', expect.objectContaining({
       body: JSON.stringify({ kind: 'PATHFINDING', ...graph }),
+    }))
+  })
+})
+
+describe('createSearchTrace', () => {
+  it('submits a binary search request to its typed trace route', async () => {
+    const searchTrace = {
+      apiVersion: '2.0', algorithm: { id: 'binary-search', name: 'Binary Search', family: 'SEARCH' },
+      input: { kind: 'SEARCH', values: [1, 3], target: 3 },
+      result: { kind: 'SEARCH', found: true, foundIndex: 1, comparisons: 2 }, limits: { maximumEvents: 10000 }, events: [],
+    }
+    const fetchMock = vi.fn().mockResolvedValue(response(searchTrace, 200))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(createSearchTrace('binary-search', [1, 3], 3)).resolves.toEqual(searchTrace)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/binary-search/trace', expect.objectContaining({
+      body: JSON.stringify({ kind: 'SEARCH', values: [1, 3], target: 3 }),
     }))
   })
 })

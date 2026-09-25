@@ -67,6 +67,7 @@ h2 { margin: 5px 0 7px; color: var(--ink); font-size: 25px; letter-spacing: -.03
 .buffer-row { top: 42px; }
 .chart { position: relative; }
 .search-visualizer {
+  position: relative;
   min-height: 350px;
   display: grid;
   place-items: center;
@@ -98,12 +99,14 @@ h2 { margin: 5px 0 7px; color: var(--ink); font-size: 25px; letter-spacing: -.03
   text-align: center;
 }
 .search-cell--inspected { border-style: dashed; }
+.search-cell--discarded { opacity: .45; text-decoration: line-through; }
 .search-cell--candidate { border-color: #9b721b; border-width: 5px; background: #f3d99d; transform: translateY(-5px); }
 .search-cell--found { border-color: var(--green); background: #acd1c0; }
 .search-cell__value { font: 600 22px 'DM Mono', monospace; }
 .search-cell__index, .search-cell__state { color: var(--muted); font: 10px 'DM Mono', monospace; text-transform: uppercase; }
 .search-cell__state { color: var(--green); }
 .search-empty { color: var(--muted); font: 14px 'DM Mono', monospace; }
+.search-interval { position: absolute; top: 14px; left: 18px; margin: 0; color: var(--green); font: 11px 'DM Mono', monospace; }
 .graph-visualizer { min-height: 350px; border: 1px solid #e3e0d8; background: #f5f2eb; }
 .graph-visualizer svg { display: block; width: 100%; height: 360px; }
 .graph-visualizer text { fill: var(--ink); font: 600 20px 'DM Mono', monospace; }

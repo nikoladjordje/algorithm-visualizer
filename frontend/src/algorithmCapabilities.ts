@@ -1,4 +1,4 @@
-import { adapters, linearSearchAdapter } from './adapters'
+import { adapters, binarySearchAdapter, linearSearchAdapter } from './adapters'
 import type { AlgorithmAdapter } from './adapters'
 import { graphAdapters } from './graphAdapters'
 import type { GraphAlgorithmAdapter } from './graphAdapters'
@@ -16,6 +16,7 @@ export function resolveAlgorithmAdapter(entry?: AlgorithmCatalogEntry): Algorith
     return { family: 'SORTING', adapter: adapters[entry.id] }
   }
   if (entry.family === 'SEARCH' && entry.id === 'linear-search') return { family: 'SEARCH', adapter: linearSearchAdapter }
+  if (entry.family === 'SEARCH' && entry.id === 'binary-search') return { family: 'SEARCH', adapter: binarySearchAdapter }
   const adapter = graphAdapters.get(entry.id)
   if (adapter && entry.family === adapter.family && entry.contractVersion === adapter.contractVersion) {
     return { family: adapter.family, adapter }

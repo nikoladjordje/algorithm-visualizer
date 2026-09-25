@@ -29,9 +29,9 @@ class WeightedGraphTests {
     @Test
     void advertisesOptionalWeightedInputAndBounds() throws Exception {
         mockMvc.perform(get("/api/v2/algorithms"))
-                .andExpect(jsonPath("$[7].constraints.weighted").value(true))
-                .andExpect(jsonPath("$[7].constraints.minimumWeight").value(1))
-                .andExpect(jsonPath("$[7].constraints.maximumWeight").value(99));
+                .andExpect(jsonPath("$[8].constraints.weighted").value(true))
+                .andExpect(jsonPath("$[8].constraints.minimumWeight").value(1))
+                .andExpect(jsonPath("$[8].constraints.maximumWeight").value(99));
     }
 
     @Test

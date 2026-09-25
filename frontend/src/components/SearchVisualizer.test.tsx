@@ -19,4 +19,13 @@ describe('SearchVisualizer', () => {
     expect(screen.getByRole('img', { name: 'Search values by index: empty. Target: 4.' })).toBeInTheDocument()
     expect(screen.getByText('No values to inspect')).toBeInTheDocument()
   })
+
+  it('makes a binary search interval and discarded values textual as well as visual', () => {
+    render(<SearchVisualizer values={[1, 3, 5, 7]} target={7} selectedIndex={2} inspectedIndices={[1, 2]} lowerBound={2} upperBound={3} />)
+
+    expect(screen.getByText('Inclusive interval: 2 through 3')).toBeInTheDocument()
+    expect(screen.getByText('discarded')).toBeInTheDocument()
+    expect(screen.getByText('inspected, discarded')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /Inclusive interval: 2 through 3/ })).toBeInTheDocument()
+  })
 })

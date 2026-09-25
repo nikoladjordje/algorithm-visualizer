@@ -22,3 +22,9 @@ export const linearSearchAdapter: AlgorithmAdapter = {
  complexity:complexity('O(1)','O(n)','O(n)','O(1)'), presets, metrics:['COMPARISONS'],
  explain:genericExplain, indices, annotations,
 }
+export const binarySearchAdapter: AlgorithmAdapter = {
+ id:'binary-search', title:'Binary Search', intro:'Repeatedly inspect the middle value of an ordered sequence and discard the half that cannot contain the target.',
+ pseudocode:[{id:'binary-initialize',text:'set the inclusive interval to every index'},{id:'binary-select-middle',text:'select the middle index'},{id:'binary-compare',text:'compare the middle value with target'},{id:'binary-narrow-interval',text:'discard the half that cannot contain target'},{id:'binary-found',text:'return the first equality probed'},{id:'binary-not-found',text:'report the empty interval'}],
+ complexity:complexity('O(1)','O(log n)','O(log n)','O(1)'), presets, metrics:['COMPARISONS'],
+ explain:genericExplain, indices, annotations,
+}

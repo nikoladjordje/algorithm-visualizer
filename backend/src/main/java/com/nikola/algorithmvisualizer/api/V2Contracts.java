@@ -53,8 +53,7 @@ final class V2Contracts {
     }
     record SearchInput(String kind, List<Integer> values, int target) { SearchInput { values = List.copyOf(values); } }
     record SearchTrace(String apiVersion, AlgorithmInfo algorithm, SearchInput input,
-            com.nikola.algorithmvisualizer.search.LinearSearchAlgorithm.Result result, Limits limits,
-            List<com.nikola.algorithmvisualizer.search.LinearSearchAlgorithm.Event> events) { SearchTrace { events = List.copyOf(events); } }
+            Object result, Limits limits, List<?> events) { SearchTrace { events = List.copyOf(events); } }
 
     record Limits(int maximumEvents) {
     }
