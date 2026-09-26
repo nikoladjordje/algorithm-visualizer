@@ -32,7 +32,30 @@ describe('App algorithm workbench',()=>{
   await user.selectOptions(screen.getByLabelText('Algorithm'), 'insertion')
   await user.selectOptions(screen.getByLabelText('Algorithm'), 'linear-search')
   expect(screen.getByLabelText('Search values')).toHaveValue('8, 3, 5')
-  expect(screen.getByLabelText('Target')).toHaveValue('5')
+ expect(screen.getByLabelText('Target')).toHaveValue('5')
+ })
+ it('applies search presets without execution and retains the shared search draft across families', async () => {
+  const searchCatalog = [
+   { id: 'linear-search', name: 'Linear Search', family: 'SEARCH', contractVersion: '2.0', constraints: { kind: 'SEARCH', minimumValues: 0, maximumValues: 50, minimumValue: -2147483648, maximumValue: 2147483647, requiresNonDecreasingValues: false } },
+   { id: 'binary-search', name: 'Binary Search', family: 'SEARCH', contractVersion: '2.0', constraints: { kind: 'SEARCH', minimumValues: 0, maximumValues: 50, minimumValue: -2147483648, maximumValue: 2147483647, requiresNonDecreasingValues: true } },
+  ]
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, ...searchCatalog] : trace), { headers: { 'Content-Type': 'application/json' } })))
+  const user = userEvent.setup()
+  render(<App />)
+  const algorithm = await screen.findByLabelText('Algorithm')
+  await user.selectOptions(algorithm, 'linear-search')
+  const preset = screen.getByRole('button', { name: 'Narrow both ways' })
+  expect(preset).toHaveAttribute('title', expect.stringContaining('right, then left'))
+  await user.click(preset)
+  expect(screen.getByLabelText('Search values')).toHaveValue('1, 3, 5, 7, 9, 11, 13')
+  expect(screen.getByLabelText('Target')).toHaveValue('9')
+  expect(fetch).toHaveBeenCalledTimes(1)
+  await user.selectOptions(algorithm, 'binary-search')
+  await user.selectOptions(algorithm, 'insertion')
+  await user.selectOptions(algorithm, 'binary-search')
+  expect(screen.getByLabelText('Search values')).toHaveValue('1, 3, 5, 7, 9, 11, 13')
+  expect(screen.getByLabelText('Target')).toHaveValue('9')
+  expect(screen.getByText('Ready')).toBeInTheDocument()
  })
  it.each([false, true])('filters incompatible adapters on catalog load and retry (%s)', async retry => {
   history.replaceState(null, '', '/?algorithm=dfs')

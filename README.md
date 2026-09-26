@@ -7,6 +7,8 @@ keeping algorithm behavior separate from presentation and playback.
 ## Current capabilities
 
 - Visualize insertion, selection, bubble, merge, quick, and heap sort.
+- Search an authored sequence with linear or binary search, including indexed playback, interval
+  narrowing, and valid not-found outcomes.
 - Author weighted or unweighted undirected graphs and explore them with breadth-first search,
   iterative depth-first search, or Dijkstra pathfinding.
 - Play, pause, reset, seek, step forward or backward, and adjust playback speed.
@@ -30,8 +32,8 @@ backend/   Java 25, Spring Boot 4, Maven, JUnit 5
 The frontend requests algorithm metadata and traces from the backend. During local development,
 Vite proxies `/api` requests to the Spring Boot server at `http://localhost:8080`.
 
-The v2 API uses family-discriminated contracts for sorting, graph traversal, and pathfinding. BFS
-and DFS remain `GRAPH_TRAVERSAL`; Dijkstra uses `PATHFINDING`. A trace contains immutable snapshots
+The v2 API uses family-discriminated contracts for sorting, search, graph traversal, and pathfinding.
+BFS and DFS remain `GRAPH_TRAVERSAL`; Dijkstra uses `PATHFINDING`. A trace contains immutable snapshots
 and typed semantic events, allowing the frontend to render any playback step without reimplementing
 the algorithm.
 
@@ -113,8 +115,8 @@ valid completed result rather than an error.
 | Algorithm family | Status | Direction |
 | --- | --- | --- |
 | Sorting | Available | Expand explanations and compare algorithm behavior. |
+| Searching | Available | Linear and binary search over authored integer sequences. |
 | Graph traversal | Available | BFS and iterative DFS over weighted or unweighted undirected graphs. |
-| Searching | Proposed | Visualize linear and binary search over ordered and unordered data. |
 | Pathfinding | Available | Dijkstra minimum-cost paths with tentative distances and relaxation steps. |
 | Trees | Proposed | Explore traversal, search, insertion, and balancing operations. |
 | Dynamic programming | Proposed | Reveal subproblems, table updates, and reconstructed solutions. |

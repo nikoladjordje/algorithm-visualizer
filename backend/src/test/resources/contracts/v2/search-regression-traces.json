@@ -1,0 +1,50 @@
+{
+  "linearEmpty": {
+    "algorithm": "linear-search",
+    "request": { "kind": "SEARCH", "values": [], "target": 4 },
+    "result": { "kind": "SEARCH", "found": false, "foundIndex": null, "comparisons": 0 },
+    "events": [
+      "SEARCH_INITIALIZED|linear-initialize",
+      "SEARCH_NOT_FOUND|linear-not-found"
+    ]
+  },
+  "linearFound": {
+    "algorithm": "linear-search",
+    "request": { "kind": "SEARCH", "values": [3, 5, 5], "target": 5 },
+    "result": { "kind": "SEARCH", "found": true, "foundIndex": 1, "comparisons": 2 },
+    "events": [
+      "SEARCH_INITIALIZED|linear-initialize",
+      "CANDIDATE_SELECTED|linear-select",
+      "TARGET_COMPARED|linear-compare",
+      "CANDIDATE_SELECTED|linear-select",
+      "TARGET_COMPARED|linear-compare",
+      "SEARCH_FOUND|linear-found"
+    ]
+  },
+  "binaryDuplicate": {
+    "algorithm": "binary-search",
+    "request": { "kind": "SEARCH", "values": [1, 3, 3, 3, 5], "target": 3 },
+    "result": { "kind": "SEARCH", "found": true, "foundIndex": 2, "comparisons": 1 },
+    "events": [
+      "SEARCH_INITIALIZED|binary-initialize",
+      "CANDIDATE_SELECTED|binary-select-middle",
+      "TARGET_COMPARED|binary-compare",
+      "SEARCH_FOUND|binary-found"
+    ]
+  },
+  "binaryNotFound": {
+    "algorithm": "binary-search",
+    "request": { "kind": "SEARCH", "values": [1, 3, 5], "target": 4 },
+    "result": { "kind": "SEARCH", "found": false, "foundIndex": null, "comparisons": 2 },
+    "events": [
+      "SEARCH_INITIALIZED|binary-initialize",
+      "CANDIDATE_SELECTED|binary-select-middle",
+      "TARGET_COMPARED|binary-compare",
+      "SEARCH_INTERVAL_NARROWED|binary-narrow-interval",
+      "CANDIDATE_SELECTED|binary-select-middle",
+      "TARGET_COMPARED|binary-compare",
+      "SEARCH_INTERVAL_NARROWED|binary-narrow-interval",
+      "SEARCH_NOT_FOUND|binary-not-found"
+    ]
+  }
+}

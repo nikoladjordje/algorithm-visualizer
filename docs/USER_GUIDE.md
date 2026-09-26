@@ -3,6 +3,8 @@
 Select an algorithm, edit its input, then choose **Visualize**. Switching algorithms stops
 playback and clears the current trace. Sorting keeps its own draft; BFS, DFS, and Dijkstra share one
 graph draft, start node, destination, and authored weights so the same experiment can be compared.
+Linear Search and Binary Search share a separate sequence-and-target draft. Search, sorting, and
+graph drafts never overwrite one another.
 An algorithm that does not use a destination keeps that draft hidden and does not submit it. The
 `?algorithm=` URL query selects an algorithm, but inputs are never placed in the URL.
 
@@ -18,6 +20,23 @@ replace the current family state.
 Enter 1–50 signed 32-bit whole numbers separated by spaces or commas. Presets cover sorted,
 reverse-sorted, duplicate, and negative values. The chart preserves item identity when equal values
 move and shows operation counters and complexity notes.
+
+## Search
+
+Enter zero to 50 signed 32-bit whole numbers and a signed 32-bit **target**. The indexed cell row
+shows the selected candidate, inspected values, a match, and (for binary search) values outside the
+inclusive **search interval** using labels, borders, patterns, and text—not color alone. The visible
+interval is `[low, high]`; it is explicitly marked empty when no candidates remain.
+
+Linear Search accepts any authored sequence, inspects left to right, and stops at its first
+**match**. Binary Search requires a non-decreasing sequence; it never sorts an invalid sequence.
+It repeatedly probes the middle value and returns its first equality probed, which may not be the
+leftmost duplicate. A missing target is a normal completed “not found” outcome for either
+algorithm, including an empty sequence.
+
+Search presets populate a draft without running it: **Immediate hit**, **Late linear hit**,
+**Not found**, **Duplicates**, **Narrow both ways**, and **Empty sequence**. They are all
+non-decreasing so the same draft can be compared safely with both search algorithms.
 
 ## Graph authoring
 
@@ -104,9 +123,10 @@ with an empty path and no total cost.
 ## Accessibility and request behavior
 
 Loading, step explanations, and completion are announced through a live region. Standard controls
-support keyboard operation and visible focus, including algorithm, graph input, presets, start,
-destination, timeline, and playback controls. Frontier changes, node transitions, distance updates,
-rejected relaxations, reconstruction, and no-path outcomes are available as text. When the operating
+support keyboard operation and visible focus, including algorithm, every family input, presets,
+start, destination, timeline, and playback controls. Search candidate selection, comparisons,
+interval changes, and completion are available as text, as are frontier changes, node transitions,
+distance updates, rejected relaxations, reconstruction, and no-path outcomes. When the operating
 system requests reduced motion, graph, chart, button, and loading transitions and animations are
 effectively removed while static symbols, labels, and patterns preserve meaning.
 
@@ -116,8 +136,9 @@ request failures show a retry action without discarding the current draft.
 
 ## Versioned learning material
 
-Sorting pseudocode mappings and explanations are in `frontend/src/adapters.ts`; graph-algorithm
-mappings and explanations are in `frontend/src/graphAdapters.ts`; fixed graph experiments are in
-`frontend/src/graphPresets.ts`. Contract schemas and representative sorting, BFS, DFS, and Dijkstra
-traces are under `backend/src/test/resources/contracts/v2/`. Product behavior is specified in the
-two graph milestone PRDs under `docs/`.
+Sorting and search pseudocode mappings and explanations are in `frontend/src/adapters.ts`; fixed
+search experiments are in `frontend/src/searchPresets.ts`; graph-algorithm mappings and explanations
+are in `frontend/src/graphAdapters.ts`; fixed graph experiments are in
+`frontend/src/graphPresets.ts`. Contract schemas and representative sorting, search, BFS, DFS, and
+Dijkstra traces are under `backend/src/test/resources/contracts/v2/`. Product behavior is specified
+in the milestone PRDs under `docs/`.

@@ -1,6 +1,6 @@
 # Algorithm Trace API v2
 
-API v2 is the family-discriminated contract for sorting, graph traversal, and pathfinding. All
+API v2 is the family-discriminated contract for sorting, searching, graph traversal, and pathfinding. All
 responses use JSON; errors use `application/problem+json`.
 
 ## Routes and catalog
@@ -8,13 +8,14 @@ responses use JSON; errors use `application/problem+json`.
 - `GET /api/v2/algorithms`
 - `POST /api/v2/algorithms/{algorithmId}/trace`
 
-Catalog order is `insertion`, `selection`, `bubble`, `merge`, `quick`, `heap`, `bfs`, `dfs`, then
-`dijkstra`. Every entry contains `id`, `name`, `family`, `contractVersion: "2.0"`, and
+Catalog order is `insertion`, `selection`, `bubble`, `merge`, `quick`, `heap`, `linear-search`,
+`binary-search`, `bfs`, `dfs`, then `dijkstra`. Every entry contains `id`, `name`, `family`, `contractVersion: "2.0"`, and
 family-specific constraints.
 
 | Family | Algorithms | Constraints |
 | --- | --- | --- |
 | `SORTING` | Six sorting algorithms | `minimumValues: 1`, `maximumValues: 50`, signed 32-bit bounds |
+| `SEARCH` | `linear-search`, `binary-search` | 0–50 signed 32-bit values and signed 32-bit target; binary search requires non-decreasing values |
 | `GRAPH_TRAVERSAL` | `bfs`, `dfs` | 1–12 nodes, at most 66 edges, undirected, optional weights 1–99 |
 | `PATHFINDING` | `dijkstra` | Same graph bounds, weights 1–99, `unweightedEdgeCost: 1`, `destinationRequired: true` |
 
@@ -85,6 +86,33 @@ Item `id` preserves identity while values move. Sorted-range bounds are inclusiv
 | `BUILD_HEAP`, `ROOT_SELECT`, `HEAPIFY`, `HEAP_SHRINK` | `heapSize`, `rootIndex`, `childIndex` |
 
 Sorting traces are locked in `src/test/resources/contracts/v2/sorting-regression-traces.json`.
+
+## Search
+
+Both search algorithms preserve the authored sequence and receive a search target:
+
+```json
+{ "kind": "SEARCH", "values": [1, 3, 5, 7], "target": 5 }
+```
+
+Their result is `{ "kind": "SEARCH", "found": boolean, "foundIndex": number | null, "comparisons": number }`.
+An empty sequence and an absent target are successful not-found outcomes. `foundIndex` is `null`
+when `found` is false. Search state contains `values`, `target`, `selectedIndex`, and
+`inspectedIndices`; binary state additionally contains inclusive `lowerBound` and `upperBound`.
+
+| Event type | Meaning |
+| --- | --- |
+| `SEARCH_INITIALIZED` | Establish the initial inspection state or binary interval. |
+| `CANDIDATE_SELECTED` | Select one value before comparing it. |
+| `TARGET_COMPARED` | Compare the selected value with the target. |
+| `SEARCH_INTERVAL_NARROWED` | Binary search discards a half after a non-match. |
+| `SEARCH_FOUND` | Complete at the matching index. |
+| `SEARCH_NOT_FOUND` | Complete after all linear candidates or an empty binary interval. |
+
+Linear search inspects from left to right and returns the first match in that order. Binary search
+requires non-decreasing input; an adjacent inversion is rejected rather than sorted. It returns the
+first equality probed, which need not be the leftmost duplicate. Search traces are locked in
+`src/test/resources/contracts/v2/search-regression-traces.json`.
 
 ## Shared weighted graph input
 
