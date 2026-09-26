@@ -19,6 +19,35 @@ class AlgorithmControllerTests {
     private MockMvc mockMvc;
 
     @Test
+    void advertisesAndRunsBinarySearchTreePreorderThroughTheTreeContract() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[-1].id").value("binary-search-tree"))
+                .andExpect(jsonPath("$[-1].family").value("TREE"))
+                .andExpect(jsonPath("$[-1].constraints.minimumValues").value(1))
+                .andExpect(jsonPath("$[-1].constraints.maximumValues").value(31))
+                .andExpect(jsonPath("$[-1].constraints.uniqueValues").value(true));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[8,3,10,1,6],\"operation\":{\"kind\":\"PREORDER\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.algorithm.family").value("TREE"))
+                .andExpect(jsonPath("$.input.insertionValues[1]").value(3))
+                .andExpect(jsonPath("$.result.kind").value("PREORDER"))
+                .andExpect(jsonPath("$.result.visitedValues[0]").value(8))
+                .andExpect(jsonPath("$.result.visitedValues[4]").value(10))
+                .andExpect(jsonPath("$.events[1].state.rootId").value(1))
+                .andExpect(jsonPath("$.events[-1].type").value("OPERATION_COMPLETED"));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[8,3,8],\"operation\":{\"kind\":\"PREORDER\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("insertionValues[2]"));
+    }
+
+    @Test
     void runsLinearSearchWithSeparateSelectionAndComparisonSteps() throws Exception {
         mockMvc.perform(post("/api/v2/algorithms/linear-search/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -71,7 +100,7 @@ class AlgorithmControllerTests {
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(11))
+                .andExpect(jsonPath("$.length()").value(12))
                 .andExpect(jsonPath("$[0].id").value("insertion"))
                 .andExpect(jsonPath("$[1].id").value("selection"))
                 .andExpect(jsonPath("$[2].id").value("bubble"))
@@ -106,7 +135,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeBreadthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(11))
+                .andExpect(jsonPath("$.length()").value(12))
                 .andExpect(jsonPath("$[8].id").value("bfs"))
                 .andExpect(jsonPath("$[8].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[8].constraints.kind").value("GRAPH_TRAVERSAL"));
@@ -142,7 +171,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeIterativeDepthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(11))
+                .andExpect(jsonPath("$.length()").value(12))
                 .andExpect(jsonPath("$[9].id").value("dfs"))
                 .andExpect(jsonPath("$[9].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[9].constraints.kind").value("GRAPH_TRAVERSAL"))

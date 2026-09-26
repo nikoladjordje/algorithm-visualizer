@@ -203,3 +203,10 @@ footer { color: #8d928e; font: 10px 'DM Mono', monospace; text-align: center; te
 
 .visualizer-grid > div { min-width: 0; }
 .graph-state dd { overflow-wrap: anywhere; }
+.tree-visualizer svg { width: 100%; height: auto; background: var(--paper); border-radius: 12px; }
+.tree-edge { stroke: var(--ink); stroke-width: 2; }
+.tree-node { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
+.tree-node--active { fill: var(--accent); stroke-width: 4; }
+.tree-node--visited { stroke-dasharray: 5 3; }
+.tree-visualizer text { fill: var(--ink); font-weight: 700; }
+.tree-description { font-size: .9rem; }

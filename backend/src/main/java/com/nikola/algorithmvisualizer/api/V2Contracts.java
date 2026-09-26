@@ -18,7 +18,7 @@ final class V2Contracts {
     }
 
     sealed interface Constraints permits SortingConstraints, GraphTraversalConstraints,
-            PathfindingConstraints, SearchConstraints {
+            PathfindingConstraints, SearchConstraints, TreeConstraints {
         String kind();
     }
 
@@ -26,6 +26,10 @@ final class V2Contracts {
             int minimumValue, int maximumValue) implements Constraints { }
     record SearchConstraints(String kind, int minimumValues, int maximumValues,
             int minimumValue, int maximumValue, boolean requiresNonDecreasingValues) implements Constraints { }
+    record TreeConstraints(String kind, int minimumValues, int maximumValues,
+            int minimumValue, int maximumValue, boolean uniqueValues, List<String> operations) implements Constraints {
+        TreeConstraints { operations = List.copyOf(operations); }
+    }
 
     record GraphTraversalConstraints(String kind, int minimumNodes, int maximumNodes,
             int maximumEdges, String nodeLabelPattern, boolean directed, boolean weighted,
@@ -54,6 +58,15 @@ final class V2Contracts {
     record SearchInput(String kind, List<Integer> values, int target) { SearchInput { values = List.copyOf(values); } }
     record SearchTrace(String apiVersion, AlgorithmInfo algorithm, SearchInput input,
             Object result, Limits limits, List<?> events) { SearchTrace { events = List.copyOf(events); } }
+    record TreeInput(String kind, List<Integer> insertionValues, TreeOperation operation) {
+        TreeInput { insertionValues = List.copyOf(insertionValues); }
+    }
+    record TreeOperation(String kind) { }
+    record TreeTrace(String apiVersion, AlgorithmInfo algorithm, TreeInput input,
+            com.nikola.algorithmvisualizer.tree.BinarySearchTreeAlgorithm.Result result, Limits limits,
+            List<com.nikola.algorithmvisualizer.tree.BinarySearchTreeAlgorithm.Event> events) {
+        TreeTrace { events = List.copyOf(events); }
+    }
 
     record Limits(int maximumEvents) {
     }

@@ -1,0 +1,113 @@
+package com.nikola.algorithmvisualizer.tree;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class BinarySearchTreeAlgorithm {
+    public enum Operation { PREORDER }
+
+    public Trace execute(List<Integer> insertionValues, Operation operation) {
+        var nodes = new ArrayList<Node>();
+        var events = new ArrayList<Event>();
+        var sequence = new Sequence();
+        emit(events, sequence, "TREE_INITIALIZED", "tree-initialize", nodes, null, null, null, null, null,
+                List.of());
+
+        Node root = null;
+        int comparisons = 0;
+        for (int value : insertionValues) {
+            if (root == null) {
+                root = new Node(nodes.size() + 1, value, null);
+                nodes.add(root);
+                emit(events, sequence, "NODE_ATTACHED", "tree-attach-root", nodes, root.id, null, "root", null,
+                        root.id, List.of());
+                continue;
+            }
+            Node current = root;
+            while (true) {
+                emit(events, sequence, "INSERTION_NODE_VISITED", "tree-insertion-visit", nodes, current.id, null,
+                        null, null, null, List.of());
+                String direction = value < current.value ? "left" : "right";
+                comparisons++;
+                emit(events, sequence, "INSERTION_COMPARED", "tree-insertion-compare", nodes, current.id, null,
+                        null, direction, null, List.of());
+                Node child = direction.equals("left") ? current.left : current.right;
+                if (child == null) {
+                    Node attached = new Node(nodes.size() + 1, value, current.id);
+                    nodes.add(attached);
+                    if (direction.equals("left")) current.left = attached; else current.right = attached;
+                    emit(events, sequence, "NODE_ATTACHED", "tree-attach-child", nodes, attached.id, current.id,
+                            direction, null, attached.id, List.of());
+                    break;
+                }
+                current = child;
+            }
+        }
+        emit(events, sequence, "CONSTRUCTION_COMPLETED", "tree-construction-complete", nodes, null, null, null,
+                null, null, List.of());
+
+        var preorder = new ArrayList<Integer>();
+        visitPreorder(root, nodes, events, sequence, preorder);
+        emit(events, sequence, "OPERATION_COMPLETED", "tree-operation-complete", nodes, null, null, null, null,
+                null, preorder);
+        return new Trace(List.copyOf(events), new Result("PREORDER", preorder, preorder.size(), comparisons,
+                insertionValues.size()));
+    }
+
+    private static void visitPreorder(Node node, List<Node> nodes, List<Event> events, Sequence sequence,
+            List<Integer> preorder) {
+        if (node == null) return;
+        preorder.add(node.value);
+        emit(events, sequence, "TRAVERSAL_NODE_VISITED", "tree-preorder-visit", nodes, node.id, null, null, null,
+                null, preorder);
+        visitPreorder(node.left, nodes, events, sequence, preorder);
+        visitPreorder(node.right, nodes, events, sequence, preorder);
+    }
+
+    private static void emit(List<Event> events, Sequence sequence, String type, String pseudocodeLineId,
+            List<Node> nodes, Integer activeNodeId, Integer parentId, String position, String direction,
+            Integer attachedNodeId, List<Integer> traversalOrder) {
+        var snapshot = nodes.stream().map(node -> new TreeNode(node.id, node.value, node.parentId,
+                node.left == null ? null : node.left.id, node.right == null ? null : node.right.id)).toList();
+        Integer rootId = snapshot.isEmpty() ? null : snapshot.getFirst().id();
+        events.add(new Event(sequence.next(), type, pseudocodeLineId,
+                new State("TREE", snapshot, rootId, activeNodeId, List.copyOf(traversalOrder), direction, attachedNodeId),
+                new Data(type, activeNodeId, parentId, position, direction, attachedNodeId)));
+    }
+
+    private static final class Node {
+        private final int id;
+        private final int value;
+        private final Integer parentId;
+        private Node left;
+        private Node right;
+
+        private Node(int id, int value, Integer parentId) {
+            this.id = id;
+            this.value = value;
+            this.parentId = parentId;
+        }
+    }
+
+    private static final class Sequence {
+        private int value;
+        int next() { return ++value; }
+    }
+
+    public record Trace(List<Event> events, Result result) { public Trace { events = List.copyOf(events); } }
+    public record Event(int sequence, String type, String pseudocodeLineId, State state, Data data) { }
+    public record State(String kind, List<TreeNode> nodes, Integer rootId, Integer activeNodeId,
+            List<Integer> traversalOrder, String comparisonDirection, Integer attachedNodeId) {
+        public State { nodes = List.copyOf(nodes); traversalOrder = List.copyOf(traversalOrder); }
+    }
+    public record TreeNode(int id, int value, Integer parentId, Integer leftId, Integer rightId) { }
+    public record Data(String kind, Integer nodeId, Integer parentId, String position, String direction,
+            Integer attachedNodeId) { }
+    public record Result(String kind, List<Integer> visitedValues, int visitedNodeCount,
+            int constructionComparisonCount, int constructionAttachmentCount) {
+        public Result { visitedValues = List.copyOf(visitedValues); }
+    }
+}

@@ -34,6 +34,7 @@ import com.nikola.algorithmvisualizer.trace.SwapData;
 import com.nikola.algorithmvisualizer.trace.VersionedAlgorithmTrace;
 import com.nikola.algorithmvisualizer.trace.WriteData;
 import com.nikola.algorithmvisualizer.trace.TraceLimitExceededException;
+import com.nikola.algorithmvisualizer.tree.BinarySearchTreeAlgorithm;
 
 @RestController
 @RequestMapping("/api/v2/algorithms")
@@ -43,6 +44,7 @@ public class V2AlgorithmController {
     private static final String GRAPH_TRAVERSAL = "GRAPH_TRAVERSAL";
     private static final String PATHFINDING = "PATHFINDING";
     private static final String SEARCH = "SEARCH";
+    private static final String TREE = "TREE";
     private static final int MAXIMUM_EVENTS = 10_000;
     private final AlgorithmRegistry registry;
     private final BreadthFirstSearchAlgorithm breadthFirstSearch;
@@ -50,17 +52,19 @@ public class V2AlgorithmController {
     private final DijkstraPathfindingAlgorithm dijkstraPathfinding;
     private final LinearSearchAlgorithm linearSearch;
     private final BinarySearchAlgorithm binarySearch;
+    private final BinarySearchTreeAlgorithm binarySearchTree;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
             DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch,
-            BinarySearchAlgorithm binarySearch) {
+            BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
         this.dijkstraPathfinding = dijkstraPathfinding;
         this.linearSearch = linearSearch;
         this.binarySearch = binarySearch;
+        this.binarySearchTree = binarySearchTree;
     }
 
     @GetMapping
@@ -84,6 +88,9 @@ public class V2AlgorithmController {
         catalog.add(new V2Contracts.CatalogEntry("dijkstra", "Dijkstra's Algorithm", PATHFINDING, "2.0",
                 new V2Contracts.PathfindingConstraints(PATHFINDING, 1, 12, 66,
                         "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99, 1, true)));
+        catalog.add(new V2Contracts.CatalogEntry("binary-search-tree", "Binary Search Tree", TREE, "2.0",
+                new V2Contracts.TreeConstraints(TREE, 1, 31, Integer.MIN_VALUE, Integer.MAX_VALUE, true,
+                        List.of("PREORDER"))));
         return List.copyOf(catalog);
     }
 
@@ -92,6 +99,16 @@ public class V2AlgorithmController {
     Object trace(@PathVariable String algorithmId, @RequestBody V2Request request) {
         if (request == null || request.kind() == null) {
             throw new IllegalArgumentException("Provide a request body with a kind");
+        }
+        if ("binary-search-tree".equals(algorithmId)) {
+            if (!TREE.equals(request.kind())) throw new AlgorithmFamilyMismatchException(algorithmId, TREE);
+            validateTree(request);
+            var treeTrace = binarySearchTree.execute(request.insertionValues(), BinarySearchTreeAlgorithm.Operation.PREORDER);
+            if (treeTrace.events().size() > MAXIMUM_EVENTS) throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            return new V2Contracts.TreeTrace("2.0",
+                    new V2Contracts.AlgorithmInfo("binary-search-tree", "Binary Search Tree", TREE),
+                    new V2Contracts.TreeInput(TREE, request.insertionValues(), new V2Contracts.TreeOperation("PREORDER")),
+                    treeTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), treeTrace.events());
         }
         if ("bfs".equals(algorithmId)) {
             if (!GRAPH_TRAVERSAL.equals(request.kind())) {
@@ -241,6 +258,21 @@ public class V2AlgorithmController {
         if (request.target() == null) throw new IllegalArgumentException("Provide a signed 32-bit integer target");
     }
 
+    private static void validateTree(V2Request request) {
+        if (request.insertionValues() == null || request.insertionValues().isEmpty()
+                || request.insertionValues().size() > 31 || request.insertionValues().stream().anyMatch(java.util.Objects::isNull)) {
+            throw new GraphValidationException("insertionValues", "Provide between 1 and 31 unique signed 32-bit integer values");
+        }
+        for (int index = 0; index < request.insertionValues().size(); index++) {
+            if (request.insertionValues().subList(0, index).contains(request.insertionValues().get(index))) {
+                throw new GraphValidationException("insertionValues[" + index + "]", "Insertion values must be unique");
+            }
+        }
+        if (request.operation() == null || !"PREORDER".equals(request.operation().kind())) {
+            throw new GraphValidationException("operation", "Select the PREORDER tree operation");
+        }
+    }
+
     private static V2Contracts.SortingEvent toV2Event(SemanticEvent<?> event) {
         return new V2Contracts.SortingEvent(event.sequence(), event.type().name(),
                 event.pseudocodeLineId(),
@@ -292,5 +324,6 @@ public class V2AlgorithmController {
     }
 
     public record V2Request(String kind, List<Integer> values, Integer target, List<String> nodes,
-            List<V2Contracts.GraphEdge> edges, String startNode, String destination) { }
+            List<V2Contracts.GraphEdge> edges, String startNode, String destination,
+            List<Integer> insertionValues, V2Contracts.TreeOperation operation) { }
 }

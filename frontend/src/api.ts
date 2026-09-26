@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, DepthFirstSearchTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, PathfindingTrace, ProblemDetail, SearchTrace } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DepthFirstSearchTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, PathfindingTrace, ProblemDetail, SearchTrace, TreeTrace } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -59,6 +59,11 @@ export function createInsertionSortTrace(values:number[]):Promise<AlgorithmTrace
 export async function createSearchTrace(algorithmId: 'linear-search' | 'binary-search', values: number[], target: number, signal?: AbortSignal): Promise<SearchTrace> {
   return requestTrace(`/api/v2/algorithms/${algorithmId}/trace`, { kind: 'SEARCH', values, target }, signal) as unknown as Promise<SearchTrace>
 }
+export async function createTreeTrace(insertionValues: number[], signal?: AbortSignal): Promise<TreeTrace> {
+  return requestTrace('/api/v2/algorithms/binary-search-tree/trace', {
+    kind: 'TREE', insertionValues, operation: { kind: 'PREORDER' },
+  }, signal) as Promise<TreeTrace>
+}
 
 export async function createGraphTraversalTrace(
   graph: { nodes: string[]; edges: GraphEdge[]; startNode: string; destination?: string },
@@ -87,7 +92,7 @@ export async function createDijkstraTrace(
   }, signal) as Promise<PathfindingTrace>
 }
 
-async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphAlgorithmTrace | SearchTrace> {
+async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace> {
   let response: Response
   try {
     response = await fetch(url, {
@@ -100,7 +105,7 @@ async function requestTrace(url: string, body: unknown, signal?: AbortSignal): P
   if (response.ok) {
     const trace = await response.json() as { apiVersion?: string }
     if (trace.apiVersion !== '2.0') throw new TraceRequestError(`Unsupported trace API version: ${trace.apiVersion ?? 'missing'}.`, 'unavailable')
-    return trace as AlgorithmTrace | GraphAlgorithmTrace | SearchTrace
+    return trace as AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace
   }
   const problem = await readProblem(response)
   if (response.status >= 400 && response.status < 500) throw new TraceRequestError(problem?.detail ?? 'Check the input and try again.', 'validation', problem)

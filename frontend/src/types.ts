@@ -248,8 +248,13 @@ export interface SearchState { kind: 'SEARCH'; values: number[]; target: number;
 export type SearchEventType = 'SEARCH_INITIALIZED' | 'CANDIDATE_SELECTED' | 'TARGET_COMPARED' | 'SEARCH_INTERVAL_NARROWED' | 'SEARCH_FOUND' | 'SEARCH_NOT_FOUND'
 export interface SearchEvent { sequence: number; type: SearchEventType; pseudocodeLineId: string; state: SearchState; data: { kind: SearchEventType; index?: number; value?: number; relation?: 'LESS' | 'EQUAL' | 'GREATER'; lowerBound?: number; upperBound?: number; found?: boolean } }
 export interface SearchTrace { apiVersion: '2.0'; algorithm: { id: 'linear-search' | 'binary-search'; name: string; family: 'SEARCH' }; input: { kind: 'SEARCH'; values: number[]; target: number }; result: { kind: 'SEARCH'; found: boolean; foundIndex?: number; comparisons: number }; limits: { maximumEvents: number }; events: SearchEvent[] }
-export type AlgorithmCatalogEntry = SortingAlgorithmCatalogEntry | GraphAlgorithmCatalogEntry | PathfindingCatalogEntry | SearchCatalogEntry
-export type VisualizerTrace = AlgorithmTrace | GraphAlgorithmTrace | SearchTrace
+export interface TreeNode { id: number; value: number; parentId: number | null; leftId: number | null; rightId: number | null }
+export interface TreeState { kind: 'TREE'; nodes: TreeNode[]; rootId: number | null; activeNodeId: number | null; traversalOrder: number[]; comparisonDirection: 'left' | 'right' | null; attachedNodeId: number | null }
+export interface TreeEvent { sequence: number; type: 'TREE_INITIALIZED' | 'INSERTION_NODE_VISITED' | 'INSERTION_COMPARED' | 'NODE_ATTACHED' | 'CONSTRUCTION_COMPLETED' | 'TRAVERSAL_NODE_VISITED' | 'OPERATION_COMPLETED'; pseudocodeLineId: string; state: TreeState; data: { kind: string; nodeId: number | null; parentId: number | null; position: 'root' | 'left' | 'right' | null; direction: 'left' | 'right' | null; attachedNodeId: number | null } }
+export interface TreeTrace { apiVersion: '2.0'; algorithm: { id: 'binary-search-tree'; name: 'Binary Search Tree'; family: 'TREE' }; input: { kind: 'TREE'; insertionValues: number[]; operation: { kind: 'PREORDER' } }; result: { kind: 'PREORDER'; visitedValues: number[]; visitedNodeCount: number; constructionComparisonCount: number; constructionAttachmentCount: number }; limits: { maximumEvents: number }; events: TreeEvent[] }
+export interface TreeCatalogEntry { id: 'binary-search-tree'; name: 'Binary Search Tree'; family: 'TREE'; contractVersion: '2.0'; constraints: { kind: 'TREE'; minimumValues: 1; maximumValues: 31; minimumValue: number; maximumValue: number; uniqueValues: true; operations: ['PREORDER'] } }
+export type AlgorithmCatalogEntry = SortingAlgorithmCatalogEntry | GraphAlgorithmCatalogEntry | PathfindingCatalogEntry | SearchCatalogEntry | TreeCatalogEntry
+export type VisualizerTrace = AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace
 
 export type MetricType = 'COMPARISONS' | 'READS' | 'WRITES' | 'SWAPS'
 export interface ProblemDetail { type: string; title: string; status: number; detail: string; instance: string; code: string; field?: string }
