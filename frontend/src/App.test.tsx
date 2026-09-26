@@ -4,6 +4,7 @@ import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest'
 import App from './App'
 const constraints={kind:'SORTING',minimumValues:1,maximumValues:50,minimumValue:-2147483648,maximumValue:2147483647}
 const catalog=[{id:'insertion',name:'Insertion Sort',family:'SORTING',contractVersion:'2.0',constraints}]
+const treeCatalog = { id: 'binary-search-tree', name: 'Binary Search Tree', family: 'TREE', contractVersion: '2.0', constraints: { kind: 'TREE', minimumValues: 1, maximumValues: 31, minimumValue: -2147483648, maximumValue: 2147483647, uniqueValues: true, operations: ['PREORDER'] } }
 const graphCatalog={id:'bfs',name:'Breadth-First Search',family:'GRAPH_TRAVERSAL',contractVersion:'2.0',constraints:{kind:'GRAPH_TRAVERSAL',minimumNodes:1,maximumNodes:12,maximumEdges:66,nodeLabelPattern:'^[A-Za-z0-9_-]{1,16}$',directed:false,weighted:false}}
 const dfsCatalog={...graphCatalog,id:'dfs',name:'Depth-First Search',constraints:{...graphCatalog.constraints,maximumNodes:12,maximumEdges:66}}
 const pathCatalog={id:'dijkstra',name:"Dijkstra's Algorithm",family:'PATHFINDING',contractVersion:'2.0',constraints:{kind:'PATHFINDING',minimumNodes:1,maximumNodes:12,maximumEdges:66,nodeLabelPattern:'^[A-Za-z0-9_-]{1,16}$',directed:false,weighted:true,minimumWeight:1,maximumWeight:99,unweightedEdgeCost:1,destinationRequired:true}}
@@ -34,6 +35,48 @@ describe('App algorithm workbench',()=>{
   expect(screen.getByLabelText('Search values')).toHaveValue('8, 3, 5')
  expect(screen.getByLabelText('Target')).toHaveValue('5')
  })
+  it('runs preorder playback with a retained BST insertion sequence', async () => {
+    const treeTrace = {
+      apiVersion: '2.0', algorithm: { id: 'binary-search-tree', name: 'Binary Search Tree', family: 'TREE' }, input: { kind: 'TREE', insertionValues: [8, 3, 10], operation: { kind: 'PREORDER' } }, result: { kind: 'PREORDER', visitedValues: [8, 3, 10], visitedNodeCount: 3, constructionComparisonCount: 2, constructionAttachmentCount: 3 }, limits: { maximumEvents: 10000 },
+      events: [
+        { sequence: 1, type: 'TREE_INITIALIZED', pseudocodeLineId: 'tree-initialize', state: { kind: 'TREE', nodes: [], rootId: null, activeNodeId: null, traversalOrder: [], comparisonDirection: null, attachedNodeId: null }, data: { kind: 'TREE_INITIALIZED', nodeId: null, parentId: null, position: null, direction: null, attachedNodeId: null } },
+        { sequence: 2, type: 'NODE_ATTACHED', pseudocodeLineId: 'tree-attach-root', state: { kind: 'TREE', nodes: [{ id: 1, value: 8, parentId: null, leftId: null, rightId: null }], rootId: 1, activeNodeId: 1, traversalOrder: [], comparisonDirection: null, attachedNodeId: 1 }, data: { kind: 'NODE_ATTACHED', nodeId: 1, parentId: null, position: 'root', direction: null, attachedNodeId: 1 } },
+        { sequence: 3, type: 'OPERATION_COMPLETED', pseudocodeLineId: 'tree-operation-complete', state: { kind: 'TREE', nodes: [{ id: 1, value: 8, parentId: null, leftId: 2, rightId: 3 }, { id: 2, value: 3, parentId: 1, leftId: null, rightId: null }, { id: 3, value: 10, parentId: 1, leftId: null, rightId: null }], rootId: 1, activeNodeId: null, traversalOrder: [8, 3, 10], comparisonDirection: null, attachedNodeId: null }, data: { kind: 'OPERATION_COMPLETED', nodeId: null, parentId: null, position: null, direction: null, attachedNodeId: null } },
+      ],
+    }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, treeCatalog] : treeTrace), { headers: { 'Content-Type': 'application/json' } })))
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+    await user.selectOptions(await screen.findByLabelText('Algorithm'), 'binary-search-tree')
+    const insertionSequence = screen.getByLabelText('BST insertion sequence')
+    await user.clear(insertionSequence)
+    await user.type(insertionSequence, '8, 3, 10')
+    await user.click(screen.getByRole('button', { name: 'Visualize preorder' }))
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'TREE', insertionValues: [8, 3, 10], operation: { kind: 'PREORDER' } })
+    expect(await screen.findByRole('img', { name: 'Binary search tree' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Next step' }))
+    await user.click(screen.getByRole('button', { name: 'Next step' }))
+    await user.click(screen.getByRole('button', { name: 'Next step' }))
+    expect(screen.getByText('Root 8. 8: left 3, right 10. 3: left none, right none. 10: left none, right none.')).toBeInTheDocument()
+    expect(screen.getByText('Preorder: 8 → 3 → 10')).toBeInTheDocument()
+    expect(screen.getByLabelText('Tree metrics')).toHaveTextContent('3visited2construction comparisons')
+    await user.selectOptions(screen.getByLabelText('Algorithm'), 'insertion')
+    await user.selectOptions(screen.getByLabelText('Algorithm'), 'binary-search-tree')
+    expect(screen.getByLabelText('BST insertion sequence')).toHaveValue('8, 3, 10')
+  })
+  it.each(['8, 3, 8', '8, 3.5', '2147483648'])('rejects invalid BST insertion sequence %j before requesting a trace', async value => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, treeCatalog] : trace), { headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+    await user.selectOptions(await screen.findByLabelText('Algorithm'), 'binary-search-tree')
+    await user.clear(screen.getByLabelText('BST insertion sequence'))
+    await user.type(screen.getByLabelText('BST insertion sequence'), value)
+    await user.click(screen.getByRole('button', { name: 'Visualize preorder' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Use 1–31 unique signed 32-bit whole numbers')
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
  it('applies search presets without execution and retains the shared search draft across families', async () => {
   const searchCatalog = [
    { id: 'linear-search', name: 'Linear Search', family: 'SEARCH', contractVersion: '2.0', constraints: { kind: 'SEARCH', minimumValues: 0, maximumValues: 50, minimumValue: -2147483648, maximumValue: 2147483647, requiresNonDecreasingValues: false } },
