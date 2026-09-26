@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class BinarySearchTreeAlgorithm {
-    public enum Operation { PREORDER, INORDER, LOOKUP }
+    public enum Operation { PREORDER, INORDER, POSTORDER, LOOKUP }
 
     public Trace execute(List<Integer> insertionValues, Operation operation) {
         return execute(insertionValues, operation, null);
@@ -62,6 +62,8 @@ public class BinarySearchTreeAlgorithm {
         var traversal = new ArrayList<Integer>();
         if (operation == Operation.INORDER) {
             visitInorder(root, nodes, events, sequence, traversal);
+        } else if (operation == Operation.POSTORDER) {
+            visitPostorder(root, nodes, events, sequence, traversal);
         } else {
             visitPreorder(root, nodes, events, sequence, traversal);
         }
@@ -120,6 +122,16 @@ public class BinarySearchTreeAlgorithm {
         emit(events, sequence, "TRAVERSAL_NODE_VISITED", "tree-inorder-visit", nodes, node.id, null, null, null,
                 null, inorder);
         visitInorder(node.right, nodes, events, sequence, inorder);
+    }
+
+    private static void visitPostorder(Node node, List<Node> nodes, List<Event> events, Sequence sequence,
+            List<Integer> postorder) {
+        if (node == null) return;
+        visitPostorder(node.left, nodes, events, sequence, postorder);
+        visitPostorder(node.right, nodes, events, sequence, postorder);
+        postorder.add(node.value);
+        emit(events, sequence, "TRAVERSAL_NODE_VISITED", "tree-postorder-visit", nodes, node.id, null, null,
+                null, null, postorder);
     }
 
     private static void emit(List<Event> events, Sequence sequence, String type, String pseudocodeLineId,

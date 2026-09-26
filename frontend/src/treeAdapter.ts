@@ -3,7 +3,7 @@ import type { TreeEvent } from './types'
 export const treeAdapter = {
   id: 'binary-search-tree',
   title: 'Binary Search Tree',
-  intro: 'Build a binary search tree from your insertion sequence, then inspect preorder or inorder traversal, or lookup, one step at a time.',
+  intro: 'Build a binary search tree from your insertion sequence, then inspect preorder, inorder, or postorder traversal, or lookup, one step at a time.',
   warning: undefined,
   pseudocode: [
     { id: 'tree-initialize', text: 'start with an empty binary search tree' },
@@ -19,6 +19,7 @@ export const treeAdapter = {
     { id: 'tree-lookup-complete', text: 'return the found or not-found lookup outcome' },
     { id: 'tree-preorder-visit', text: 'visit node, then left subtree, then right subtree' },
     { id: 'tree-inorder-visit', text: 'visit left subtree, then node, then right subtree' },
+    { id: 'tree-postorder-visit', text: 'visit left subtree, then right subtree, then node' },
     { id: 'tree-operation-complete', text: 'return traversal order' },
   ],
   complexity: [
@@ -40,7 +41,9 @@ export const treeAdapter = {
     if (event.type === 'LOOKUP_NOT_FOUND') return `${event.state.lookupTarget} is not in this binary search tree.`
     if (event.type === 'TRAVERSAL_NODE_VISITED') return event.pseudocodeLineId === 'tree-inorder-visit'
       ? `Visit ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} after its left subtree; inorder stays ascending in a valid binary search tree.`
-      : `Visit ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} in preorder.`
+      : event.pseudocodeLineId === 'tree-postorder-visit'
+        ? `Visit ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} after both subtrees; postorder visits children before their parent.`
+        : `Visit ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} in preorder.`
     return `Traversal complete: ${event.state.traversalOrder.join(' → ')}.`
   },
 }

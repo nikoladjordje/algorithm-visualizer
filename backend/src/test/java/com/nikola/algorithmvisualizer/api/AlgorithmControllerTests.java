@@ -28,7 +28,8 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$[-1].constraints.maximumValues").value(31))
                 .andExpect(jsonPath("$[-1].constraints.uniqueValues").value(true))
                 .andExpect(jsonPath("$[-1].constraints.operations[1]").value("INORDER"))
-                .andExpect(jsonPath("$[-1].constraints.operations[2]").value("LOOKUP"));
+                .andExpect(jsonPath("$[-1].constraints.operations[2]").value("POSTORDER"))
+                .andExpect(jsonPath("$[-1].constraints.operations[3]").value("LOOKUP"));
 
         mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -51,6 +52,16 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.result.visitedValues[0]").value(1))
                 .andExpect(jsonPath("$.result.visitedValues[4]").value(10))
                 .andExpect(jsonPath("$.events[-2].pseudocodeLineId").value("tree-inorder-visit"));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[8,3,10,1,6],\"operation\":{\"kind\":\"POSTORDER\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.operation.kind").value("POSTORDER"))
+                .andExpect(jsonPath("$.result.kind").value("POSTORDER"))
+                .andExpect(jsonPath("$.result.visitedValues[0]").value(1))
+                .andExpect(jsonPath("$.result.visitedValues[4]").value(8))
+                .andExpect(jsonPath("$.events[-2].pseudocodeLineId").value("tree-postorder-visit"));
 
         mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
                         .contentType(MediaType.APPLICATION_JSON)

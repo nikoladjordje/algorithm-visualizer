@@ -51,6 +51,42 @@ class BinarySearchTreeAlgorithmTests {
     }
 
     @Test
+    void traversesEachSubtreeBeforeItsParentInPostorder() {
+        var trace = algorithm.execute(List.of(8, 3, 10, 1, 6), BinarySearchTreeAlgorithm.Operation.POSTORDER);
+
+        assertEquals("POSTORDER", trace.result().kind());
+        assertIterableEquals(List.of(1, 6, 3, 10, 8), trace.result().visitedValues());
+        assertEquals(5, trace.result().visitedNodeCount());
+        assertEquals("TRAVERSAL_NODE_VISITED", trace.events().get(trace.events().size() - 2).type());
+        assertEquals("tree-postorder-visit", trace.events().get(trace.events().size() - 2).pseudocodeLineId());
+        assertIterableEquals(List.of(1, 6, 3, 10, 8), trace.events().getLast().state().traversalOrder());
+        assertThrows(UnsupportedOperationException.class,
+                () -> trace.events().getLast().state().traversalOrder().add(11));
+    }
+
+    @Test
+    void traversesOneNodeSkewedAndMixedTreesInPostorder() {
+        var oneNode = algorithm.execute(List.of(4), BinarySearchTreeAlgorithm.Operation.POSTORDER);
+        var leftSkewed = algorithm.execute(List.of(5, 4, 3, 2, 1), BinarySearchTreeAlgorithm.Operation.POSTORDER);
+        var rightSkewed = algorithm.execute(List.of(1, 2, 3, 4, 5), BinarySearchTreeAlgorithm.Operation.POSTORDER);
+        var mixed = algorithm.execute(List.of(10, -5, 20, -10, 0, 15, 25, -7, 17),
+                BinarySearchTreeAlgorithm.Operation.POSTORDER);
+
+        assertIterableEquals(List.of(4), oneNode.result().visitedValues());
+        assertIterableEquals(List.of(1, 2, 3, 4, 5), leftSkewed.result().visitedValues());
+        assertIterableEquals(List.of(5, 4, 3, 2, 1), rightSkewed.result().visitedValues());
+        assertIterableEquals(List.of(-7, -10, 0, -5, 17, 15, 25, 20, 10), mixed.result().visitedValues());
+        var constructionCompleted = mixed.events().stream()
+                .filter(event -> event.type().equals("CONSTRUCTION_COMPLETED"))
+                .findFirst().orElseThrow();
+        var firstTraversalVisit = mixed.events().stream()
+                .filter(event -> event.type().equals("TRAVERSAL_NODE_VISITED"))
+                .findFirst().orElseThrow();
+        assertEquals(constructionCompleted.sequence() + 1, firstTraversalVisit.sequence());
+        assertEquals("OPERATION_COMPLETED", mixed.events().getLast().type());
+    }
+
+    @Test
     void traversesOneNodeSkewedMixedAndBoundaryTreesInAscendingOrder() {
         var oneNode = algorithm.execute(List.of(4), BinarySearchTreeAlgorithm.Operation.INORDER);
         var leftSkewed = algorithm.execute(List.of(5, 4, 3, 2, 1), BinarySearchTreeAlgorithm.Operation.INORDER);
