@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, DepthFirstSearchTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, PathfindingTrace, ProblemDetail, SearchTrace, TreeTrace } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DepthFirstSearchTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, PathfindingTrace, ProblemDetail, SearchTrace, TreeOperation, TreeTrace } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -59,9 +59,9 @@ export function createInsertionSortTrace(values:number[]):Promise<AlgorithmTrace
 export async function createSearchTrace(algorithmId: 'linear-search' | 'binary-search', values: number[], target: number, signal?: AbortSignal): Promise<SearchTrace> {
   return requestTrace(`/api/v2/algorithms/${algorithmId}/trace`, { kind: 'SEARCH', values, target }, signal) as unknown as Promise<SearchTrace>
 }
-export async function createTreeTrace(insertionValues: number[], signal?: AbortSignal): Promise<TreeTrace> {
+export async function createTreeTrace(insertionValues: number[], operation: TreeOperation, signal?: AbortSignal): Promise<TreeTrace> {
   return requestTrace('/api/v2/algorithms/binary-search-tree/trace', {
-    kind: 'TREE', insertionValues, operation: { kind: 'PREORDER' },
+    kind: 'TREE', insertionValues, operation,
   }, signal) as Promise<TreeTrace>
 }
 

@@ -2,6 +2,7 @@ package com.nikola.algorithmvisualizer.tree;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -31,5 +32,50 @@ class BinarySearchTreeAlgorithmTests {
         assertEquals(List.of(), trace.events().get(1).state().nodes().get(0).leftId() == null
                 ? List.of() : List.of(trace.events().get(1).state().nodes().get(0).leftId()));
         assertEquals(2, trace.events().getLast().state().nodes().get(0).leftId());
+    }
+
+    @Test
+    void looksUpAnInternalValueWithoutChangingTheConstructedTree() {
+        var trace = algorithm.execute(List.of(8, 3, 10, 1, 6), BinarySearchTreeAlgorithm.Operation.LOOKUP, 6);
+
+        assertEquals("LOOKUP", trace.result().kind());
+        assertEquals(6, trace.result().target());
+        assertEquals(true, trace.result().found());
+        assertEquals(5, trace.result().matchedNodeId());
+        assertIterableEquals(List.of(8, 3, 6), trace.result().visitedValues());
+        assertEquals(3, trace.result().comparisonCount());
+        assertIterableEquals(List.of(8, 3, 6), trace.events().getLast().state().lookupPath());
+        assertEquals("LOOKUP_FOUND", trace.events().get(trace.events().size() - 2).type());
+        assertEquals(2, trace.events().getLast().state().nodes().getFirst().leftId());
+    }
+
+    @Test
+    void reportsAMissingChildAfterFollowingTheLookupPath() {
+        var trace = algorithm.execute(List.of(8, 3, 10), BinarySearchTreeAlgorithm.Operation.LOOKUP, -1);
+
+        assertEquals(false, trace.result().found());
+        assertEquals(null, trace.result().matchedNodeId());
+        assertIterableEquals(List.of(8, 3), trace.result().visitedValues());
+        assertEquals("LOOKUP_NOT_FOUND", trace.events().get(trace.events().size() - 2).type());
+        assertEquals(3, trace.events().getLast().state().nodes().size());
+    }
+
+    @Test
+    void handlesRootLeafRightMissAndSignedIntegerBoundaryLookups() {
+        var root = algorithm.execute(List.of(8, 3, 10, 1, 6), BinarySearchTreeAlgorithm.Operation.LOOKUP, 8);
+        var leaf = algorithm.execute(List.of(8, 3, 10, 1, 6), BinarySearchTreeAlgorithm.Operation.LOOKUP, 1);
+        var rightMiss = algorithm.execute(List.of(8, 3, 10), BinarySearchTreeAlgorithm.Operation.LOOKUP, 11);
+        var boundaries = algorithm.execute(List.of(Integer.MIN_VALUE, 0, Integer.MAX_VALUE),
+                BinarySearchTreeAlgorithm.Operation.LOOKUP, Integer.MAX_VALUE);
+
+        assertIterableEquals(List.of(8), root.result().visitedValues());
+        assertIterableEquals(List.of(8, 3, 1), leaf.result().visitedValues());
+        assertIterableEquals(List.of(8, 10), rightMiss.result().visitedValues());
+        assertEquals(false, rightMiss.result().found());
+        assertEquals(Integer.MAX_VALUE, boundaries.result().matchedNodeId() == null ? null
+                : boundaries.events().getLast().state().nodes().get(boundaries.result().matchedNodeId() - 1).value());
+        assertThrows(UnsupportedOperationException.class, () -> root.events().getLast().state().nodes().add(null));
+        assertThrows(IllegalArgumentException.class,
+                () -> algorithm.execute(List.of(8), BinarySearchTreeAlgorithm.Operation.LOOKUP));
     }
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createDepthFirstSearchTrace, createDijkstraTrace, createGraphTraversalTrace, createInsertionSortTrace, createSearchTrace } from './api'
+import { createDepthFirstSearchTrace, createDijkstraTrace, createGraphTraversalTrace, createInsertionSortTrace, createSearchTrace, createTreeTrace } from './api'
 import type { AlgorithmTrace, ProblemDetail } from './types'
 
 const trace: AlgorithmTrace = {
@@ -143,6 +143,19 @@ describe('createSearchTrace', () => {
     await expect(createSearchTrace('binary-search', [1, 3], 3)).resolves.toEqual(searchTrace)
     expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/binary-search/trace', expect.objectContaining({
       body: JSON.stringify({ kind: 'SEARCH', values: [1, 3], target: 3 }),
+    }))
+  })
+})
+
+describe('createTreeTrace', () => {
+  it('submits a lookup target only for the LOOKUP operation', async () => {
+    const treeTrace = { apiVersion: '2.0', algorithm: { id: 'binary-search-tree', name: 'Binary Search Tree', family: 'TREE' }, input: { kind: 'TREE', insertionValues: [8], operation: { kind: 'LOOKUP', target: 8 } }, result: { kind: 'LOOKUP', found: true, target: 8, matchedNodeId: 1, visitedValues: [8], visitedNodeCount: 1, comparisonCount: 1, constructionComparisonCount: 0, constructionAttachmentCount: 1 }, limits: { maximumEvents: 10000 }, events: [] }
+    const fetchMock = vi.fn().mockResolvedValue(response(treeTrace, 200))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(createTreeTrace([8], { kind: 'LOOKUP', target: 8 })).resolves.toEqual(treeTrace)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/algorithms/binary-search-tree/trace', expect.objectContaining({
+      body: JSON.stringify({ kind: 'TREE', insertionValues: [8], operation: { kind: 'LOOKUP', target: 8 } }),
     }))
   })
 })

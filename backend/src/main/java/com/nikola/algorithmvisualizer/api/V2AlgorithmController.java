@@ -90,7 +90,7 @@ public class V2AlgorithmController {
                         "^[A-Za-z0-9_-]{1,16}$", false, true, 1, 99, 1, true)));
         catalog.add(new V2Contracts.CatalogEntry("binary-search-tree", "Binary Search Tree", TREE, "2.0",
                 new V2Contracts.TreeConstraints(TREE, 1, 31, Integer.MIN_VALUE, Integer.MAX_VALUE, true,
-                        List.of("PREORDER"))));
+                        List.of("PREORDER", "LOOKUP"))));
         return List.copyOf(catalog);
     }
 
@@ -103,11 +103,12 @@ public class V2AlgorithmController {
         if ("binary-search-tree".equals(algorithmId)) {
             if (!TREE.equals(request.kind())) throw new AlgorithmFamilyMismatchException(algorithmId, TREE);
             validateTree(request);
-            var treeTrace = binarySearchTree.execute(request.insertionValues(), BinarySearchTreeAlgorithm.Operation.PREORDER);
+            var operation = BinarySearchTreeAlgorithm.Operation.valueOf(request.operation().kind());
+            var treeTrace = binarySearchTree.execute(request.insertionValues(), operation, request.operation().target());
             if (treeTrace.events().size() > MAXIMUM_EVENTS) throw new TraceLimitExceededException(MAXIMUM_EVENTS);
             return new V2Contracts.TreeTrace("2.0",
                     new V2Contracts.AlgorithmInfo("binary-search-tree", "Binary Search Tree", TREE),
-                    new V2Contracts.TreeInput(TREE, request.insertionValues(), new V2Contracts.TreeOperation("PREORDER")),
+                    new V2Contracts.TreeInput(TREE, request.insertionValues(), request.operation()),
                     treeTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), treeTrace.events());
         }
         if ("bfs".equals(algorithmId)) {
@@ -268,8 +269,14 @@ public class V2AlgorithmController {
                 throw new GraphValidationException("insertionValues[" + index + "]", "Insertion values must be unique");
             }
         }
-        if (request.operation() == null || !"PREORDER".equals(request.operation().kind())) {
-            throw new GraphValidationException("operation", "Select the PREORDER tree operation");
+        if (request.operation() == null || (!"PREORDER".equals(request.operation().kind()) && !"LOOKUP".equals(request.operation().kind()))) {
+            throw new GraphValidationException("operation", "Select the PREORDER or LOOKUP tree operation");
+        }
+        if ("LOOKUP".equals(request.operation().kind()) && request.operation().target() == null) {
+            throw new GraphValidationException("operation.target", "Provide a signed 32-bit integer lookup target");
+        }
+        if ("PREORDER".equals(request.operation().kind()) && request.operation().target() != null) {
+            throw new GraphValidationException("operation.target", "Preorder traversal does not accept a lookup target");
         }
     }
 

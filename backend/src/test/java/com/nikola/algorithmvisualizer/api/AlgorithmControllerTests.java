@@ -26,7 +26,8 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$[-1].family").value("TREE"))
                 .andExpect(jsonPath("$[-1].constraints.minimumValues").value(1))
                 .andExpect(jsonPath("$[-1].constraints.maximumValues").value(31))
-                .andExpect(jsonPath("$[-1].constraints.uniqueValues").value(true));
+                .andExpect(jsonPath("$[-1].constraints.uniqueValues").value(true))
+                .andExpect(jsonPath("$[-1].constraints.operations[1]").value("LOOKUP"));
 
         mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -45,6 +46,35 @@ class AlgorithmControllerTests {
                         .content("{\"kind\":\"TREE\",\"insertionValues\":[8,3,8],\"operation\":{\"kind\":\"PREORDER\"}}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.field").value("insertionValues[2]"));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[8,3,10,1,6],\"operation\":{\"kind\":\"LOOKUP\",\"target\":6}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.operation.kind").value("LOOKUP"))
+                .andExpect(jsonPath("$.input.operation.target").value(6))
+                .andExpect(jsonPath("$.result.found").value(true))
+                .andExpect(jsonPath("$.result.matchedNodeId").value(5))
+                .andExpect(jsonPath("$.result.visitedValues[2]").value(6))
+                .andExpect(jsonPath("$.events[-2].type").value("LOOKUP_FOUND"));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[8],\"operation\":{\"kind\":\"LOOKUP\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("operation.target"));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[8],\"operation\":{\"kind\":\"PREORDER\",\"target\":8}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("operation.target"));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"SORTING\",\"values\":[8]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ALGORITHM_FAMILY_MISMATCH"));
     }
 
     @Test

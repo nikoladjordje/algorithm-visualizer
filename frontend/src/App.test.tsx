@@ -77,6 +77,25 @@ describe('App algorithm workbench',()=>{
     expect(screen.getByRole('alert')).toHaveTextContent('Use 1–31 unique signed 32-bit whole numbers')
     expect(fetchMock).toHaveBeenCalledOnce()
   })
+  it('shows a lookup target only for Lookup and submits its typed request', async () => {
+    const lookupTrace = { apiVersion: '2.0', algorithm: { id: 'binary-search-tree', name: 'Binary Search Tree', family: 'TREE' }, input: { kind: 'TREE', insertionValues: [8, 3, 10], operation: { kind: 'LOOKUP', target: 3 } }, result: { kind: 'LOOKUP', found: true, target: 3, matchedNodeId: 2, visitedValues: [8, 3], visitedNodeCount: 2, comparisonCount: 2, constructionComparisonCount: 2, constructionAttachmentCount: 3 }, limits: { maximumEvents: 10000 }, events: [{ sequence: 1, type: 'OPERATION_COMPLETED', pseudocodeLineId: 'tree-lookup-complete', state: { kind: 'TREE', nodes: [], rootId: null, activeNodeId: null, traversalOrder: [], comparisonDirection: null, attachedNodeId: null, lookupTarget: 3, lookupPath: [8, 3] }, data: { kind: 'OPERATION_COMPLETED', nodeId: null, parentId: null, position: null, direction: null, attachedNodeId: null } }] }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, { ...treeCatalog, constraints: { ...treeCatalog.constraints, operations: ['PREORDER', 'LOOKUP'] } }] : lookupTrace), { headers: { 'Content-Type': 'application/json' } })))
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+    await user.selectOptions(await screen.findByLabelText('Algorithm'), 'binary-search-tree')
+    expect(screen.queryByLabelText('Lookup target')).not.toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Tree operation'), 'LOOKUP')
+    await user.clear(screen.getByLabelText('Lookup target'))
+    await user.type(screen.getByLabelText('Lookup target'), '3')
+    await user.click(screen.getByRole('button', { name: 'Visualize lookup' }))
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'TREE', insertionValues: [8, 3, 10, 1, 6], operation: { kind: 'LOOKUP', target: 3 } })
+    await user.click(screen.getByRole('button', { name: 'Next step' }))
+    expect(await screen.findByText('Found 3 after inspecting 8 → 3.')).toBeInTheDocument()
+    expect(screen.getByText('Lookup found 3 after inspecting 8, 3.')).toBeInTheDocument()
+    expect(screen.getByText('return the found or not-found lookup outcome').parentElement).toHaveAttribute('aria-current', 'step')
+    expect(screen.getByLabelText('Tree metrics')).toHaveTextContent('2visited2lookup comparisons')
+  })
  it('applies search presets without execution and retains the shared search draft across families', async () => {
   const searchCatalog = [
    { id: 'linear-search', name: 'Linear Search', family: 'SEARCH', contractVersion: '2.0', constraints: { kind: 'SEARCH', minimumValues: 0, maximumValues: 50, minimumValue: -2147483648, maximumValue: 2147483647, requiresNonDecreasingValues: false } },

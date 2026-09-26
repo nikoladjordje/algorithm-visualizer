@@ -61,7 +61,7 @@ final class V2Contracts {
     record TreeInput(String kind, List<Integer> insertionValues, TreeOperation operation) {
         TreeInput { insertionValues = List.copyOf(insertionValues); }
     }
-    record TreeOperation(String kind) { }
+    record TreeOperation(String kind, Integer target) { }
     record TreeTrace(String apiVersion, AlgorithmInfo algorithm, TreeInput input,
             com.nikola.algorithmvisualizer.tree.BinarySearchTreeAlgorithm.Result result, Limits limits,
             List<com.nikola.algorithmvisualizer.tree.BinarySearchTreeAlgorithm.Event> events) {
