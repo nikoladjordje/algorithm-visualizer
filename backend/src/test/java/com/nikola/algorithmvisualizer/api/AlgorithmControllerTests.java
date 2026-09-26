@@ -100,6 +100,29 @@ class AlgorithmControllerTests {
     }
 
     @Test
+    void boundsTheMaximumDepthTreeTraceAndRejectsUnsupportedTreeOperations() throws Exception {
+        String descendingValues = java.util.stream.IntStream.rangeClosed(1, 31)
+                .map(value -> 32 - value)
+                .mapToObj(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(","));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[" + descendingValues
+                                + "],\"operation\":{\"kind\":\"POSTORDER\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.insertionValues.length()").value(31))
+                .andExpect(jsonPath("$.events.length()").value(995))
+                .andExpect(jsonPath("$.limits.maximumEvents").value(10_000));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[8],\"operation\":{\"kind\":\"DELETE\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("operation"));
+    }
+
+    @Test
     void runsLinearSearchWithSeparateSelectionAndComparisonSteps() throws Exception {
         mockMvc.perform(post("/api/v2/algorithms/linear-search/trace")
                         .contentType(MediaType.APPLICATION_JSON)

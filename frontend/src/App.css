@@ -208,5 +208,11 @@ footer { color: #8d928e; font: 10px 'DM Mono', monospace; text-align: center; te
 .tree-node { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
 .tree-node--active { fill: var(--accent); stroke-width: 4; }
 .tree-node--visited { stroke-dasharray: 5 3; }
+.tree-node--direction-left, .tree-node--direction-right { stroke-width: 5; }
+.tree-node--attached { stroke-dasharray: 2 2; }
+.tree-node--complete { stroke-width: 4; }
 .tree-visualizer text { fill: var(--ink); font-weight: 700; }
+.tree-node-marker { font-size: 18px; font-weight: 700; }
+.tree-node-marker--direction { fill: var(--orange) !important; }
+.tree-node-marker--attached, .tree-node-marker--complete { fill: var(--green) !important; }
 .tree-description { font-size: .9rem; }
