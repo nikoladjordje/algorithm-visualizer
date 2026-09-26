@@ -3,7 +3,7 @@ import type { TreeEvent } from './types'
 export const treeAdapter = {
   id: 'binary-search-tree',
   title: 'Binary Search Tree',
-  intro: 'Build a binary search tree from your insertion sequence, then inspect preorder traversal or lookup one step at a time.',
+  intro: 'Build a binary search tree from your insertion sequence, then inspect preorder or inorder traversal, or lookup, one step at a time.',
   warning: undefined,
   pseudocode: [
     { id: 'tree-initialize', text: 'start with an empty binary search tree' },
@@ -18,7 +18,8 @@ export const treeAdapter = {
     { id: 'tree-lookup-not-found', text: 'stop when the selected child is absent' },
     { id: 'tree-lookup-complete', text: 'return the found or not-found lookup outcome' },
     { id: 'tree-preorder-visit', text: 'visit node, then left subtree, then right subtree' },
-    { id: 'tree-operation-complete', text: 'return preorder traversal order' },
+    { id: 'tree-inorder-visit', text: 'visit left subtree, then node, then right subtree' },
+    { id: 'tree-operation-complete', text: 'return traversal order' },
   ],
   complexity: [
     { label: 'Build', value: 'O(n²)', explanation: 'A skewed BST can make each insertion visit all prior nodes.' },
@@ -32,12 +33,14 @@ export const treeAdapter = {
     if (event.type === 'NODE_ATTACHED') return event.data.position === 'root'
       ? `Attach ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} as the root.`
       : `Attach ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} as the ${event.data.position} child.`
-    if (event.type === 'CONSTRUCTION_COMPLETED') return event.state.lookupTarget === null || event.state.lookupTarget === undefined ? 'Construction is complete; preorder traversal begins next.' : `Construction is complete; lookup for ${event.state.lookupTarget} begins next.`
+    if (event.type === 'CONSTRUCTION_COMPLETED') return event.state.lookupTarget === null || event.state.lookupTarget === undefined ? 'Construction is complete; traversal begins next.' : `Construction is complete; lookup for ${event.state.lookupTarget} begins next.`
     if (event.type === 'LOOKUP_NODE_VISITED') return `Inspect ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} while looking for ${event.state.lookupTarget}.`
     if (event.type === 'LOOKUP_COMPARED') return `The target is ${event.data.direction} of the current node.`
     if (event.type === 'LOOKUP_FOUND') return `Found ${event.state.lookupTarget}.`
     if (event.type === 'LOOKUP_NOT_FOUND') return `${event.state.lookupTarget} is not in this binary search tree.`
-    if (event.type === 'TRAVERSAL_NODE_VISITED') return `Visit ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} in preorder.`
-    return `Preorder traversal complete: ${event.state.traversalOrder.join(' → ')}.`
+    if (event.type === 'TRAVERSAL_NODE_VISITED') return event.pseudocodeLineId === 'tree-inorder-visit'
+      ? `Visit ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} after its left subtree; inorder stays ascending in a valid binary search tree.`
+      : `Visit ${event.state.nodes.find(node => node.id === event.data.nodeId)?.value} in preorder.`
+    return `Traversal complete: ${event.state.traversalOrder.join(' → ')}.`
   },
 }

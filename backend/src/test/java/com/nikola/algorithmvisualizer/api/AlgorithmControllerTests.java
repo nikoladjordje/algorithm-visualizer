@@ -19,7 +19,7 @@ class AlgorithmControllerTests {
     private MockMvc mockMvc;
 
     @Test
-    void advertisesAndRunsBinarySearchTreePreorderThroughTheTreeContract() throws Exception {
+    void advertisesAndRunsBinarySearchTreeTraversalsThroughTheTreeContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[-1].id").value("binary-search-tree"))
@@ -27,7 +27,8 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$[-1].constraints.minimumValues").value(1))
                 .andExpect(jsonPath("$[-1].constraints.maximumValues").value(31))
                 .andExpect(jsonPath("$[-1].constraints.uniqueValues").value(true))
-                .andExpect(jsonPath("$[-1].constraints.operations[1]").value("LOOKUP"));
+                .andExpect(jsonPath("$[-1].constraints.operations[1]").value("INORDER"))
+                .andExpect(jsonPath("$[-1].constraints.operations[2]").value("LOOKUP"));
 
         mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -40,6 +41,16 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.result.visitedValues[4]").value(10))
                 .andExpect(jsonPath("$.events[1].state.rootId").value(1))
                 .andExpect(jsonPath("$.events[-1].type").value("OPERATION_COMPLETED"));
+
+        mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"TREE\",\"insertionValues\":[8,3,10,1,6],\"operation\":{\"kind\":\"INORDER\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.input.operation.kind").value("INORDER"))
+                .andExpect(jsonPath("$.result.kind").value("INORDER"))
+                .andExpect(jsonPath("$.result.visitedValues[0]").value(1))
+                .andExpect(jsonPath("$.result.visitedValues[4]").value(10))
+                .andExpect(jsonPath("$.events[-2].pseudocodeLineId").value("tree-inorder-visit"));
 
         mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
                         .contentType(MediaType.APPLICATION_JSON)

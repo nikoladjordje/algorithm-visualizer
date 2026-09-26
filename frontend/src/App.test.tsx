@@ -65,6 +65,23 @@ describe('App algorithm workbench',()=>{
     await user.selectOptions(screen.getByLabelText('Algorithm'), 'binary-search-tree')
     expect(screen.getByLabelText('BST insertion sequence')).toHaveValue('8, 3, 10')
   })
+  it('runs inorder playback and explains its ascending traversal order', async () => {
+    const inorderTrace = { apiVersion: '2.0', algorithm: { id: 'binary-search-tree', name: 'Binary Search Tree', family: 'TREE' }, input: { kind: 'TREE', insertionValues: [8, 3, 10], operation: { kind: 'INORDER' } }, result: { kind: 'INORDER', visitedValues: [3, 8, 10], visitedNodeCount: 3, constructionComparisonCount: 2, constructionAttachmentCount: 3 }, limits: { maximumEvents: 10000 }, events: [{ sequence: 1, type: 'TRAVERSAL_NODE_VISITED', pseudocodeLineId: 'tree-inorder-visit', state: { kind: 'TREE', nodes: [{ id: 1, value: 8, parentId: null, leftId: 2, rightId: 3 }, { id: 2, value: 3, parentId: 1, leftId: null, rightId: null }, { id: 3, value: 10, parentId: 1, leftId: null, rightId: null }], rootId: 1, activeNodeId: 2, traversalOrder: [3], comparisonDirection: null, attachedNodeId: null }, data: { kind: 'TRAVERSAL_NODE_VISITED', nodeId: 2, parentId: null, position: null, direction: null, attachedNodeId: null } }, { sequence: 2, type: 'OPERATION_COMPLETED', pseudocodeLineId: 'tree-operation-complete', state: { kind: 'TREE', nodes: [{ id: 1, value: 8, parentId: null, leftId: 2, rightId: 3 }, { id: 2, value: 3, parentId: 1, leftId: null, rightId: null }, { id: 3, value: 10, parentId: 1, leftId: null, rightId: null }], rootId: 1, activeNodeId: null, traversalOrder: [3, 8, 10], comparisonDirection: null, attachedNodeId: null }, data: { kind: 'OPERATION_COMPLETED', nodeId: null, parentId: null, position: null, direction: null, attachedNodeId: null } }] }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, { ...treeCatalog, constraints: { ...treeCatalog.constraints, operations: ['PREORDER', 'INORDER', 'LOOKUP'] } }] : inorderTrace), { headers: { 'Content-Type': 'application/json' } })))
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+    await user.selectOptions(await screen.findByLabelText('Algorithm'), 'binary-search-tree')
+    await user.selectOptions(screen.getByLabelText('Tree operation'), 'INORDER')
+    await user.click(screen.getByRole('button', { name: 'Visualize inorder' }))
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'TREE', insertionValues: [8, 3, 10, 1, 6], operation: { kind: 'INORDER' } })
+    await user.click(screen.getByRole('button', { name: 'Next step' }))
+    expect(screen.getAllByText('Visit 3 after its left subtree; inorder stays ascending in a valid binary search tree.')).toHaveLength(2)
+    await user.click(screen.getByRole('button', { name: 'Next step' }))
+    expect(screen.getByText('Inorder traversal complete: 3 → 8 → 10.')).toBeInTheDocument()
+    expect(screen.getByText('Inorder: 3 → 8 → 10')).toBeInTheDocument()
+    expect(screen.getByText('visit left subtree, then node, then right subtree')).toBeInTheDocument()
+  })
   it.each(['8, 3, 8', '8, 3.5', '2147483648'])('rejects invalid BST insertion sequence %j before requesting a trace', async value => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, treeCatalog] : trace), { headers: { 'Content-Type': 'application/json' } }))
     vi.stubGlobal('fetch', fetchMock)

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class BinarySearchTreeAlgorithm {
-    public enum Operation { PREORDER, LOOKUP }
+    public enum Operation { PREORDER, INORDER, LOOKUP }
 
     public Trace execute(List<Integer> insertionValues, Operation operation) {
         return execute(insertionValues, operation, null);
@@ -59,11 +59,15 @@ public class BinarySearchTreeAlgorithm {
         if (operation == Operation.LOOKUP) {
             return lookup(root, nodes, events, sequence, lookupTarget, comparisons, insertionValues.size());
         }
-        var preorder = new ArrayList<Integer>();
-        visitPreorder(root, nodes, events, sequence, preorder);
+        var traversal = new ArrayList<Integer>();
+        if (operation == Operation.INORDER) {
+            visitInorder(root, nodes, events, sequence, traversal);
+        } else {
+            visitPreorder(root, nodes, events, sequence, traversal);
+        }
         emit(events, sequence, "OPERATION_COMPLETED", "tree-operation-complete", nodes, null, null, null, null,
-                null, preorder);
-        return new Trace(List.copyOf(events), new Result("PREORDER", null, null, null, preorder, preorder.size(),
+                null, traversal);
+        return new Trace(List.copyOf(events), new Result(operation.name(), null, null, null, traversal, traversal.size(),
                 null, comparisons, insertionValues.size()));
     }
 
@@ -106,6 +110,16 @@ public class BinarySearchTreeAlgorithm {
                 null, preorder);
         visitPreorder(node.left, nodes, events, sequence, preorder);
         visitPreorder(node.right, nodes, events, sequence, preorder);
+    }
+
+    private static void visitInorder(Node node, List<Node> nodes, List<Event> events, Sequence sequence,
+            List<Integer> inorder) {
+        if (node == null) return;
+        visitInorder(node.left, nodes, events, sequence, inorder);
+        inorder.add(node.value);
+        emit(events, sequence, "TRAVERSAL_NODE_VISITED", "tree-inorder-visit", nodes, node.id, null, null, null,
+                null, inorder);
+        visitInorder(node.right, nodes, events, sequence, inorder);
     }
 
     private static void emit(List<Event> events, Sequence sequence, String type, String pseudocodeLineId,

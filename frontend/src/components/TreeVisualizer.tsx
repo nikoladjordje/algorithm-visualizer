@@ -1,6 +1,6 @@
-import type { TreeState } from '../types'
+import type { TreeOperation, TreeState } from '../types'
 
-export function TreeVisualizer({ state }: { state?: TreeState }) {
+export function TreeVisualizer({ state, operation }: { state?: TreeState; operation?: TreeOperation['kind'] }) {
   const nodes = state?.nodes ?? []
   const root = nodes.find(node => node.id === state?.rootId)
   const description = root
@@ -24,5 +24,5 @@ export function TreeVisualizer({ state }: { state?: TreeState }) {
       return from && to ? <line key={`${node.id}-${childId}`} className="tree-edge" x1={from.x} y1={from.y} x2={to.x} y2={to.y} /> : null
     }))}
     {nodes.map(node => { const position = positions.get(node.id); if (!position) return null; const active = node.id === state?.activeNodeId; const visited = state?.traversalOrder.includes(node.value) || state?.lookupPath?.includes(node.value); return <g key={node.id} transform={`translate(${position.x} ${position.y})`}><circle className={`tree-node${active ? ' tree-node--active' : ''}${visited ? ' tree-node--visited' : ''}`} r="24" /><text textAnchor="middle" dy=".35em">{node.value}</text><title>{node.value}{active ? ', active' : visited ? ', visited' : ''}</title></g> })}
-  </svg><p className="tree-description">{description}</p><p>{state?.lookupTarget === null || state?.lookupTarget === undefined ? `Preorder: ${state?.traversalOrder.join(' → ') || 'not started'}` : `Lookup path: ${state.lookupPath?.join(' → ') || 'not started'}`}</p></div>
+  </svg><p className="tree-description">{description}</p><p>{state?.lookupTarget === null || state?.lookupTarget === undefined ? `${operation === 'INORDER' ? 'Inorder' : 'Preorder'}: ${state?.traversalOrder.join(' → ') || 'not started'}` : `Lookup path: ${state.lookupPath?.join(' → ') || 'not started'}`}</p></div>
 }

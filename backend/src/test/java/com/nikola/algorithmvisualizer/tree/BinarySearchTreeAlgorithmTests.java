@@ -35,6 +35,43 @@ class BinarySearchTreeAlgorithmTests {
     }
 
     @Test
+    void traversesABinarySearchTreeInAscendingInorder() {
+        var trace = algorithm.execute(List.of(8, 3, 10, 1, 6), BinarySearchTreeAlgorithm.Operation.INORDER);
+
+        assertEquals("INORDER", trace.result().kind());
+        assertIterableEquals(List.of(1, 3, 6, 8, 10), trace.result().visitedValues());
+        assertEquals(5, trace.result().visitedNodeCount());
+        assertEquals(5, trace.result().constructionAttachmentCount());
+        assertEquals("TRAVERSAL_NODE_VISITED", trace.events().get(trace.events().size() - 2).type());
+        assertEquals("tree-inorder-visit", trace.events().get(trace.events().size() - 2).pseudocodeLineId());
+        assertIterableEquals(List.of(1, 3, 6, 8, 10), trace.events().getLast().state().traversalOrder());
+        assertThrows(UnsupportedOperationException.class,
+                () -> trace.events().getLast().state().traversalOrder().add(11));
+    }
+
+    @Test
+    void traversesOneNodeSkewedMixedAndBoundaryTreesInAscendingOrder() {
+        var oneNode = algorithm.execute(List.of(4), BinarySearchTreeAlgorithm.Operation.INORDER);
+        var leftSkewed = algorithm.execute(List.of(5, 4, 3, 2, 1), BinarySearchTreeAlgorithm.Operation.INORDER);
+        var rightSkewed = algorithm.execute(List.of(1, 2, 3, 4, 5), BinarySearchTreeAlgorithm.Operation.INORDER);
+        var mixed = algorithm.execute(List.of(10, -5, 20, -10, 0, 15, 25, -7, 17),
+                BinarySearchTreeAlgorithm.Operation.INORDER);
+        var boundaries = algorithm.execute(List.of(0, Integer.MAX_VALUE, Integer.MIN_VALUE, -1, 1),
+                BinarySearchTreeAlgorithm.Operation.INORDER);
+        var deterministicShuffle = algorithm.execute(List.of(12, 4, 19, 1, 8, 15, 23, 6, 10),
+                BinarySearchTreeAlgorithm.Operation.INORDER);
+
+        assertIterableEquals(List.of(4), oneNode.result().visitedValues());
+        assertIterableEquals(List.of(1, 2, 3, 4, 5), leftSkewed.result().visitedValues());
+        assertIterableEquals(List.of(1, 2, 3, 4, 5), rightSkewed.result().visitedValues());
+        assertIterableEquals(List.of(-10, -7, -5, 0, 10, 15, 17, 20, 25), mixed.result().visitedValues());
+        assertIterableEquals(List.of(Integer.MIN_VALUE, -1, 0, 1, Integer.MAX_VALUE), boundaries.result().visitedValues());
+        assertIterableEquals(List.of(1, 4, 6, 8, 10, 12, 15, 19, 23), deterministicShuffle.result().visitedValues());
+        assertEquals("OPERATION_COMPLETED", deterministicShuffle.events().getLast().type());
+        assertEquals(deterministicShuffle.events().size(), deterministicShuffle.events().getLast().sequence());
+    }
+
+    @Test
     void looksUpAnInternalValueWithoutChangingTheConstructedTree() {
         var trace = algorithm.execute(List.of(8, 3, 10, 1, 6), BinarySearchTreeAlgorithm.Operation.LOOKUP, 6);
 
