@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
@@ -69,6 +70,15 @@ class BinarySearchTreeAlgorithmTests {
         assertIterableEquals(List.of(1, 4, 6, 8, 10, 12, 15, 19, 23), deterministicShuffle.result().visitedValues());
         assertEquals("OPERATION_COMPLETED", deterministicShuffle.events().getLast().type());
         assertEquals(deterministicShuffle.events().size(), deterministicShuffle.events().getLast().sequence());
+    }
+
+    @Test
+    void traversesReproducibleRandomUniqueValuesInAscendingOrder() {
+        var values = new Random(17).ints(-100, 101).distinct().limit(31).boxed().toList();
+
+        var trace = algorithm.execute(values, BinarySearchTreeAlgorithm.Operation.INORDER);
+
+        assertIterableEquals(values.stream().sorted().toList(), trace.result().visitedValues());
     }
 
     @Test
