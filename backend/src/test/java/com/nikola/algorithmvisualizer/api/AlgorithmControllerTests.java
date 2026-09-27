@@ -19,17 +19,38 @@ class AlgorithmControllerTests {
     private MockMvc mockMvc;
 
     @Test
+    void advertisesAndRunsTheFirstKnapsackTraceThroughTheDynamicProgrammingContract() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[-1].id").value("zero-one-knapsack"))
+                .andExpect(jsonPath("$[-1].family").value("DYNAMIC_PROGRAMMING"))
+                .andExpect(jsonPath("$[-1].constraints.minimumItems").value(1))
+                .andExpect(jsonPath("$[-1].constraints.maximumItems").value(1));
+
+        mockMvc.perform(post("/api/v2/algorithms/zero-one-knapsack/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DYNAMIC_PROGRAMMING\",\"items\":[{\"name\":\"Map\",\"weight\":1,\"value\":4}],\"capacity\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.algorithm.family").value("DYNAMIC_PROGRAMMING"))
+                .andExpect(jsonPath("$.input.items[0].name").value("Map"))
+                .andExpect(jsonPath("$.events[0].type").value("BASE_CASES_INITIALIZED"))
+                .andExpect(jsonPath("$.events[1].type").value("CELL_EVALUATED"))
+                .andExpect(jsonPath("$.events[2].state.table[1][1]").value(4))
+                .andExpect(jsonPath("$.events[2].data.committedValue").value(4));
+    }
+
+    @Test
     void advertisesAndRunsBinarySearchTreeTraversalsThroughTheTreeContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[-1].id").value("binary-search-tree"))
-                .andExpect(jsonPath("$[-1].family").value("TREE"))
-                .andExpect(jsonPath("$[-1].constraints.minimumValues").value(1))
-                .andExpect(jsonPath("$[-1].constraints.maximumValues").value(31))
-                .andExpect(jsonPath("$[-1].constraints.uniqueValues").value(true))
-                .andExpect(jsonPath("$[-1].constraints.operations[1]").value("INORDER"))
-                .andExpect(jsonPath("$[-1].constraints.operations[2]").value("POSTORDER"))
-                .andExpect(jsonPath("$[-1].constraints.operations[3]").value("LOOKUP"));
+                .andExpect(jsonPath("$[11].id").value("binary-search-tree"))
+                .andExpect(jsonPath("$[11].family").value("TREE"))
+                .andExpect(jsonPath("$[11].constraints.minimumValues").value(1))
+                .andExpect(jsonPath("$[11].constraints.maximumValues").value(31))
+                .andExpect(jsonPath("$[11].constraints.uniqueValues").value(true))
+                .andExpect(jsonPath("$[11].constraints.operations[1]").value("INORDER"))
+                .andExpect(jsonPath("$[11].constraints.operations[2]").value("POSTORDER"))
+                .andExpect(jsonPath("$[11].constraints.operations[3]").value("LOOKUP"));
 
         mockMvc.perform(post("/api/v2/algorithms/binary-search-tree/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -175,7 +196,7 @@ class AlgorithmControllerTests {
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(12))
+                .andExpect(jsonPath("$.length()").value(13))
                 .andExpect(jsonPath("$[0].id").value("insertion"))
                 .andExpect(jsonPath("$[1].id").value("selection"))
                 .andExpect(jsonPath("$[2].id").value("bubble"))
@@ -210,7 +231,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeBreadthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(12))
+                .andExpect(jsonPath("$.length()").value(13))
                 .andExpect(jsonPath("$[8].id").value("bfs"))
                 .andExpect(jsonPath("$[8].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[8].constraints.kind").value("GRAPH_TRAVERSAL"));
@@ -246,7 +267,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeIterativeDepthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(12))
+                .andExpect(jsonPath("$.length()").value(13))
                 .andExpect(jsonPath("$[9].id").value("dfs"))
                 .andExpect(jsonPath("$[9].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[9].constraints.kind").value("GRAPH_TRAVERSAL"))

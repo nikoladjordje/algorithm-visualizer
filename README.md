@@ -131,6 +131,12 @@ is strictly ascending.
 | Pathfinding | Available | Dijkstra minimum-cost paths with tentative distances and relaxation steps. |
 | Trees | Available | Unbalanced binary search tree construction, lookup, preorder, inorder, and postorder traversal. |
 | Dynamic programming | Proposed | Reveal subproblems, table updates, and reconstructed solutions. |
+| Data structures | Proposed | Visualize stack, queue, and linked-list operations with their changing state. |
+| Backtracking | Proposed | Explore choices, dead ends, and undo steps through a maze solver or N-Queens. |
+| Recursion and divide-and-conquer | Proposed | Expose call structure and recursive decomposition in algorithms such as merge sort and binary search. |
+| Directed graph algorithms | Proposed | Add directed graph authoring with topological sorting and cycle detection. |
+| Minimum spanning trees | Proposed | Use weighted graphs to teach Prim's or Kruskal's minimum-total-cost connectivity. |
+| String matching | Proposed | Compare naive matching with KMP's prefix-table-guided skips. |
 
 Direct visual graph editing and directed graphs are not currently supported. Proposed families
 describe the intended direction and may change as the interaction and trace contracts evolve. Tree

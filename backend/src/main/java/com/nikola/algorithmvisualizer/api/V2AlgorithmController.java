@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.nikola.algorithmvisualizer.algorithm.AlgorithmRegistry;
+import com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm;
 import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
@@ -45,6 +46,7 @@ public class V2AlgorithmController {
     private static final String PATHFINDING = "PATHFINDING";
     private static final String SEARCH = "SEARCH";
     private static final String TREE = "TREE";
+    private static final String DYNAMIC_PROGRAMMING = "DYNAMIC_PROGRAMMING";
     private static final int MAXIMUM_EVENTS = 10_000;
     private final AlgorithmRegistry registry;
     private final BreadthFirstSearchAlgorithm breadthFirstSearch;
@@ -53,11 +55,12 @@ public class V2AlgorithmController {
     private final LinearSearchAlgorithm linearSearch;
     private final BinarySearchAlgorithm binarySearch;
     private final BinarySearchTreeAlgorithm binarySearchTree;
+    private final KnapsackAlgorithm knapsack;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
             DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch,
-            BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree) {
+            BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree, KnapsackAlgorithm knapsack) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
@@ -65,6 +68,7 @@ public class V2AlgorithmController {
         this.linearSearch = linearSearch;
         this.binarySearch = binarySearch;
         this.binarySearchTree = binarySearchTree;
+        this.knapsack = knapsack;
     }
 
     @GetMapping
@@ -91,6 +95,8 @@ public class V2AlgorithmController {
         catalog.add(new V2Contracts.CatalogEntry("binary-search-tree", "Binary Search Tree", TREE, "2.0",
                 new V2Contracts.TreeConstraints(TREE, 1, 31, Integer.MIN_VALUE, Integer.MAX_VALUE, true,
                         List.of("PREORDER", "INORDER", "POSTORDER", "LOOKUP"))));
+        catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
+                new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 1, 1, 1, 1, 0)));
         return List.copyOf(catalog);
     }
 
@@ -110,6 +116,19 @@ public class V2AlgorithmController {
                     new V2Contracts.AlgorithmInfo("binary-search-tree", "Binary Search Tree", TREE),
                     new V2Contracts.TreeInput(TREE, request.insertionValues(), request.operation()),
                     treeTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), treeTrace.events());
+        }
+        if ("zero-one-knapsack".equals(algorithmId)) {
+            if (!DYNAMIC_PROGRAMMING.equals(request.kind())) {
+                throw new AlgorithmFamilyMismatchException(algorithmId, DYNAMIC_PROGRAMMING);
+            }
+            validateKnapsack(request);
+            var items = request.items().stream()
+                    .map(item -> new KnapsackAlgorithm.Item(item.name(), item.weight(), item.value())).toList();
+            var knapsackTrace = knapsack.execute(items, request.capacity());
+            return new V2Contracts.DynamicProgrammingTrace("2.0",
+                    new V2Contracts.AlgorithmInfo("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING),
+                    new V2Contracts.DynamicProgrammingInput(DYNAMIC_PROGRAMMING, request.items(), request.capacity()),
+                    knapsackTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), knapsackTrace.events());
         }
         if ("bfs".equals(algorithmId)) {
             if (!GRAPH_TRAVERSAL.equals(request.kind())) {
@@ -284,6 +303,25 @@ public class V2AlgorithmController {
         }
     }
 
+    private static void validateKnapsack(V2Request request) {
+        if (request.items() == null || request.items().size() != 1) {
+            throw new GraphValidationException("items", "Provide exactly one named item for this first Knapsack trace");
+        }
+        var item = request.items().getFirst();
+        if (item == null || item.name() == null || item.name().isBlank()) {
+            throw new GraphValidationException("items[0].name", "Provide a non-empty item name");
+        }
+        if (item.weight() < 1) {
+            throw new GraphValidationException("items[0].weight", "Item weight must be at least 1");
+        }
+        if (item.value() < 0) {
+            throw new GraphValidationException("items[0].value", "Item value must be non-negative");
+        }
+        if (request.capacity() == null || request.capacity() != 1) {
+            throw new GraphValidationException("capacity", "Use capacity 1 for this first Knapsack trace");
+        }
+    }
+
     private static V2Contracts.SortingEvent toV2Event(SemanticEvent<?> event) {
         return new V2Contracts.SortingEvent(event.sequence(), event.type().name(),
                 event.pseudocodeLineId(),
@@ -336,5 +374,6 @@ public class V2AlgorithmController {
 
     public record V2Request(String kind, List<Integer> values, Integer target, List<String> nodes,
             List<V2Contracts.GraphEdge> edges, String startNode, String destination,
-            List<Integer> insertionValues, V2Contracts.TreeOperation operation) { }
+            List<Integer> insertionValues, V2Contracts.TreeOperation operation,
+            List<V2Contracts.KnapsackItem> items, Integer capacity) { }
 }

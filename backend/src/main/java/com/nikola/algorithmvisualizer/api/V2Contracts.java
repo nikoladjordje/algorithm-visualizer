@@ -18,7 +18,7 @@ final class V2Contracts {
     }
 
     sealed interface Constraints permits SortingConstraints, GraphTraversalConstraints,
-            PathfindingConstraints, SearchConstraints, TreeConstraints {
+            PathfindingConstraints, SearchConstraints, TreeConstraints, DynamicProgrammingConstraints {
         String kind();
     }
 
@@ -40,6 +40,9 @@ final class V2Contracts {
             int maximumEdges, String nodeLabelPattern, boolean directed, boolean weighted,
             int minimumWeight, int maximumWeight, int unweightedEdgeCost,
             boolean destinationRequired) implements Constraints { }
+
+    record DynamicProgrammingConstraints(String kind, int minimumItems, int maximumItems,
+            int minimumCapacity, int maximumCapacity, int minimumWeight, int minimumValue) implements Constraints { }
 
     record AlgorithmInfo(String id, String name, String family) {
     }
@@ -66,6 +69,16 @@ final class V2Contracts {
             com.nikola.algorithmvisualizer.tree.BinarySearchTreeAlgorithm.Result result, Limits limits,
             List<com.nikola.algorithmvisualizer.tree.BinarySearchTreeAlgorithm.Event> events) {
         TreeTrace { events = List.copyOf(events); }
+    }
+
+    record KnapsackItem(String name, int weight, int value) { }
+    record DynamicProgrammingInput(String kind, List<KnapsackItem> items, int capacity) {
+        DynamicProgrammingInput { items = List.copyOf(items); }
+    }
+    record DynamicProgrammingTrace(String apiVersion, AlgorithmInfo algorithm, DynamicProgrammingInput input,
+            com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm.Result result, Limits limits,
+            List<com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm.Event> events) {
+        DynamicProgrammingTrace { events = List.copyOf(events); }
     }
 
     record Limits(int maximumEvents) {
