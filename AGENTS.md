@@ -45,3 +45,17 @@ Backend tests use JUnit 5 with Spring Boot test support. Name test classes `*Tes
 The repository has no existing commits from which to infer a convention. Use short, imperative subjects, optionally with Conventional Commit prefixes, for example `feat: add merge sort animation` or `fix: handle empty input`.
 
 Pull requests should explain the change, list verification commands, and link relevant issues. Include screenshots for visual changes and call out API or configuration changes. Keep each pull request narrowly scoped and ensure lint, build, and tests pass.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the default five-label triage vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Uses a single-context layout. See `docs/agents/domain.md`.
