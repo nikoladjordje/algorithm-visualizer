@@ -64,7 +64,7 @@ export async function createTreeTrace(insertionValues: number[], operation: Tree
     kind: 'TREE', insertionValues, operation,
   }, signal) as Promise<TreeTrace>
 }
-export async function createKnapsackTrace(items: KnapsackItem[], capacity: 1, signal?: AbortSignal): Promise<DynamicProgrammingTrace> {
+export async function createKnapsackTrace(items: KnapsackItem[], capacity: number, signal?: AbortSignal): Promise<DynamicProgrammingTrace> {
   return requestTrace('/api/v2/algorithms/zero-one-knapsack/trace', { kind: 'DYNAMIC_PROGRAMMING', items, capacity }, signal) as Promise<DynamicProgrammingTrace>
 }
 

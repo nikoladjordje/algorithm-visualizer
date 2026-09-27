@@ -16,7 +16,10 @@ export const knapsackAdapter = {
   ],
   explain(event: DynamicProgrammingEvent): string {
     if (event.type === 'BASE_CASES_INITIALIZED') return 'Base cases are 0: no items or no capacity cannot produce value.'
-    if (event.type === 'CELL_EVALUATED') return `Compare excluding ${event.state.items[0].name} (${event.data.excludeValue}) with including it (${event.data.includeValue}).`
-    return `Commit ${event.data.committedValue} for ${event.state.items[0].name} with capacity ${event.state.capacity}.`
+    const itemName = event.state.items[event.state.activeItemCount - 1]?.name ?? 'this item'
+    if (event.type === 'CELL_EVALUATED') return event.data.unavailableCandidateReason
+      ? `${itemName} cannot fit: ${event.data.unavailableCandidateReason.toLowerCase()}. Exclude it for ${event.data.excludeValue}.`
+      : `Compare excluding ${itemName} (${event.data.excludeValue}) with including it (${event.data.includeValue}).`
+    return `Commit ${event.data.committedValue} for ${itemName} with capacity ${event.state.activeCapacity} by ${event.data.selectedBranch?.toLowerCase() ?? 'choosing'} the item.`
   },
 }

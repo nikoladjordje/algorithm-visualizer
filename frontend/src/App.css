@@ -216,3 +216,9 @@ footer { color: #8d928e; font: 10px 'DM Mono', monospace; text-align: center; te
 .tree-node-marker--direction { fill: var(--orange) !important; }
 .tree-node-marker--attached, .tree-node-marker--complete { fill: var(--green) !important; }
 .tree-description { font-size: .9rem; }
+.knapsack-visualizer { overflow-x: auto; border: 1px solid #e3e0d8; background: #f5f2eb; }
+.knapsack-visualizer table { width: 100%; border-collapse: collapse; font: 12px 'DM Mono', monospace; }
+.knapsack-visualizer th, .knapsack-visualizer td { padding: 10px; border: 1px solid #d8d5cd; text-align: center; }
+.knapsack-visualizer th { color: var(--ink); background: #e5e2db; }
+.knapsack-visualizer td[data-dependency] { border-style: dashed; border-width: 3px; }
+.knapsack-visualizer td[aria-current='true'] { outline: 4px solid var(--orange); outline-offset: -4px; font-weight: 700; }

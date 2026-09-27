@@ -25,7 +25,7 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$[-1].id").value("zero-one-knapsack"))
                 .andExpect(jsonPath("$[-1].family").value("DYNAMIC_PROGRAMMING"))
                 .andExpect(jsonPath("$[-1].constraints.minimumItems").value(1))
-                .andExpect(jsonPath("$[-1].constraints.maximumItems").value(1));
+                .andExpect(jsonPath("$[-1].constraints.maximumItems").value(10));
 
         mockMvc.perform(post("/api/v2/algorithms/zero-one-knapsack/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -37,6 +37,48 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.events[1].type").value("CELL_EVALUATED"))
                 .andExpect(jsonPath("$.events[2].state.table[1][1]").value(4))
                 .andExpect(jsonPath("$.events[2].data.committedValue").value(4));
+    }
+
+    @Test
+    void runsBoundedKnapsackTabulationThroughTheDynamicProgrammingContract() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[-1].constraints.minimumItems").value(1))
+                .andExpect(jsonPath("$[-1].constraints.maximumItems").value(10))
+                .andExpect(jsonPath("$[-1].constraints.minimumCapacity").value(0))
+                .andExpect(jsonPath("$[-1].constraints.maximumCapacity").value(20));
+
+        mockMvc.perform(post("/api/v2/algorithms/zero-one-knapsack/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DYNAMIC_PROGRAMMING\",\"items\":[{\"name\":\"Map\",\"weight\":1,\"value\":4},{\"name\":\"Compass\",\"weight\":2,\"value\":5}],\"capacity\":3}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events.length()").value(13))
+                .andExpect(jsonPath("$.events[1].data.selectedBranch").value("INCLUDE"))
+                .andExpect(jsonPath("$.events[11].state.dependencyCells[1].capacity").value(1))
+                .andExpect(jsonPath("$.result.maximumValue").value(9));
+    }
+
+    @Test
+    void rejectsInvalidKnapsackInputsWithStructuredValidationResponses() throws Exception {
+        String endpoint = "/api/v2/algorithms/zero-one-knapsack/trace";
+        mockMvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DYNAMIC_PROGRAMMING\",\"items\":[],\"capacity\":0}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("items"));
+        mockMvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DYNAMIC_PROGRAMMING\",\"items\":[{\"name\":\"\",\"weight\":0,\"value\":-1}],\"capacity\":0}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("items[0].name"));
+        mockMvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DYNAMIC_PROGRAMMING\",\"items\":[{\"name\":\"Map\",\"weight\":0,\"value\":4}],\"capacity\":0}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("items[0].weight"));
+        mockMvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DYNAMIC_PROGRAMMING\",\"items\":[{\"name\":\"Map\",\"weight\":1,\"value\":-1}],\"capacity\":0}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("items[0].value"));
+        mockMvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DYNAMIC_PROGRAMMING\",\"items\":[{\"name\":\"Map\",\"weight\":1,\"value\":4}],\"capacity\":21}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("capacity"));
+        mockMvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"SORTING\",\"items\":[{\"name\":\"Map\",\"weight\":1,\"value\":4}],\"capacity\":1}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("ALGORITHM_FAMILY_MISMATCH"));
     }
 
     @Test

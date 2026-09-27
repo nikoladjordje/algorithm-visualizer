@@ -96,7 +96,7 @@ public class V2AlgorithmController {
                 new V2Contracts.TreeConstraints(TREE, 1, 31, Integer.MIN_VALUE, Integer.MAX_VALUE, true,
                         List.of("PREORDER", "INORDER", "POSTORDER", "LOOKUP"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
-                new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 1, 1, 1, 1, 0)));
+                new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
     }
 
@@ -125,6 +125,9 @@ public class V2AlgorithmController {
             var items = request.items().stream()
                     .map(item -> new KnapsackAlgorithm.Item(item.name(), item.weight(), item.value())).toList();
             var knapsackTrace = knapsack.execute(items, request.capacity());
+            if (knapsackTrace.events().size() > MAXIMUM_EVENTS) {
+                throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            }
             return new V2Contracts.DynamicProgrammingTrace("2.0",
                     new V2Contracts.AlgorithmInfo("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING),
                     new V2Contracts.DynamicProgrammingInput(DYNAMIC_PROGRAMMING, request.items(), request.capacity()),
@@ -304,21 +307,23 @@ public class V2AlgorithmController {
     }
 
     private static void validateKnapsack(V2Request request) {
-        if (request.items() == null || request.items().size() != 1) {
-            throw new GraphValidationException("items", "Provide exactly one named item for this first Knapsack trace");
+        if (request.items() == null || request.items().size() < 1 || request.items().size() > 10) {
+            throw new GraphValidationException("items", "Provide from 1 through 10 named items");
         }
-        var item = request.items().getFirst();
-        if (item == null || item.name() == null || item.name().isBlank()) {
-            throw new GraphValidationException("items[0].name", "Provide a non-empty item name");
+        for (int index = 0; index < request.items().size(); index++) {
+            var item = request.items().get(index);
+            if (item == null || item.name() == null || item.name().isBlank()) {
+                throw new GraphValidationException("items[" + index + "].name", "Provide a non-empty item name");
+            }
+            if (item.weight() < 1) {
+                throw new GraphValidationException("items[" + index + "].weight", "Item weight must be at least 1");
+            }
+            if (item.value() < 0) {
+                throw new GraphValidationException("items[" + index + "].value", "Item value must be non-negative");
+            }
         }
-        if (item.weight() < 1) {
-            throw new GraphValidationException("items[0].weight", "Item weight must be at least 1");
-        }
-        if (item.value() < 0) {
-            throw new GraphValidationException("items[0].value", "Item value must be non-negative");
-        }
-        if (request.capacity() == null || request.capacity() != 1) {
-            throw new GraphValidationException("capacity", "Use capacity 1 for this first Knapsack trace");
+        if (request.capacity() == null || request.capacity() < 0 || request.capacity() > 20) {
+            throw new GraphValidationException("capacity", "Use a whole-number capacity from 0 through 20");
         }
     }
 
