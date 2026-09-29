@@ -207,6 +207,21 @@ describe('App algorithm workbench',()=>{
  })
 
  it('loads the v2 insertion algorithm',async()=>{render(<App/>);expect(await screen.findByRole('option',{name:'Insertion Sort'})).toBeInTheDocument()})
+ it('authors Knapsack item rows, applies a preset, and retains invalid draft input', async () => {
+  const knapsackCatalog = { id: 'zero-one-knapsack', name: '0/1 Knapsack', family: 'DYNAMIC_PROGRAMMING', contractVersion: '2.0', constraints: { kind: 'DYNAMIC_PROGRAMMING', minimumItems: 1, maximumItems: 10, minimumCapacity: 0, maximumCapacity: 20, minimumWeight: 1, minimumValue: 0 } }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([...catalog, knapsackCatalog]), { headers: { 'Content-Type': 'application/json' } })))
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'zero-one-knapsack')
+  await user.click(screen.getByRole('button', { name: 'Add item' }))
+  expect(screen.getByLabelText('Item 3 name')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Weekend hike' }))
+  expect(screen.getByLabelText('Item 1 name')).toHaveValue('Map')
+  await user.clear(screen.getByLabelText('Item 1 name'))
+  await user.click(screen.getAllByRole('button', { name: 'Visualize Knapsack' }).at(-1)!)
+  expect(screen.getByRole('alert')).toHaveTextContent('Provide 1–10 items as name, weight, value')
+  expect(screen.getByLabelText('Item 1 name')).toHaveValue('')
+ })
   it('selects 0/1 Knapsack, submits one named item, and renders its committed cell', async () => {
   const knapsackCatalog = { id: 'zero-one-knapsack', name: '0/1 Knapsack', family: 'DYNAMIC_PROGRAMMING', contractVersion: '2.0', constraints: { kind: 'DYNAMIC_PROGRAMMING', minimumItems: 1, maximumItems: 1, minimumCapacity: 1, maximumCapacity: 1, minimumWeight: 1, minimumValue: 0 } }
   const knapsackTrace = { apiVersion: '2.0', algorithm: { id: 'zero-one-knapsack', name: '0/1 Knapsack', family: 'DYNAMIC_PROGRAMMING' }, input: { kind: 'DYNAMIC_PROGRAMMING', items: [{ name: 'Map', weight: 1, value: 4 }], capacity: 1 }, result: { kind: 'DYNAMIC_PROGRAMMING', maximumValue: 4, totalSelectedWeight: 1, selectedItems: [{ name: 'Map', weight: 1, value: 4 }] }, limits: { maximumEvents: 10000 }, events: [{ sequence: 1, type: 'BASE_CASES_INITIALIZED', pseudocodeLineId: 'knapsack-initialize-base-cases', state: { kind: 'DYNAMIC_PROGRAMMING', items: [{ name: 'Map', weight: 1, value: 4 }], capacity: 1, table: [[0, 0], [0, 0]], activeItemCount: 0, activeCapacity: 0, selectedItems: [], phase: 'BASE_CASES' }, data: { kind: 'BASE_CASES_INITIALIZED' } }, { sequence: 2, type: 'CELL_EVALUATED', pseudocodeLineId: 'knapsack-evaluate-cell', state: { kind: 'DYNAMIC_PROGRAMMING', items: [{ name: 'Map', weight: 1, value: 4 }], capacity: 1, table: [[0, 0], [0, 0]], activeItemCount: 1, activeCapacity: 1, selectedItems: [], phase: 'TABULATION' }, data: { kind: 'CELL_EVALUATED', excludeValue: 0, includeValue: 4 } }, { sequence: 3, type: 'CELL_COMMITTED', pseudocodeLineId: 'knapsack-commit-cell', state: { kind: 'DYNAMIC_PROGRAMMING', items: [{ name: 'Map', weight: 1, value: 4 }], capacity: 1, table: [[0, 0], [0, 4]], activeItemCount: 1, activeCapacity: 1, selectedItems: [], phase: 'TABULATION' }, data: { kind: 'CELL_COMMITTED', excludeValue: 0, includeValue: 4, committedValue: 4 } }] }
@@ -215,11 +230,10 @@ describe('App algorithm workbench',()=>{
   const user = userEvent.setup()
   render(<App />)
   await user.selectOptions(await screen.findByLabelText('Algorithm'), 'zero-one-knapsack')
-  await user.clear(screen.getByLabelText('Items'))
-  await user.type(screen.getByLabelText('Items'), 'Map, 1, 4')
-  await user.clear(screen.getByLabelText('Capacity'))
-  await user.type(screen.getByLabelText('Capacity'), '1')
-  await user.click(screen.getByRole('button', { name: 'Visualize Knapsack' }))
+  await user.click(screen.getByRole('button', { name: 'Remove item 2' }))
+  await user.clear(screen.getAllByLabelText('Capacity').at(-1)!)
+  await user.type(screen.getAllByLabelText('Capacity').at(-1)!, '1')
+  await user.click(screen.getAllByRole('button', { name: 'Visualize Knapsack' }).at(-1)!)
   expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual(knapsackTrace.input)
   await user.click(screen.getByRole('button', { name: 'Next step' }))
   await user.click(screen.getByRole('button', { name: 'Next step' }))
