@@ -75,7 +75,7 @@ function App() {
   const buffer: TraceItem[] = sortingEvent && 'buffer' in sortingEvent.data ? sortingEvent.data.buffer : []
   const eventItems = sortingEvent?.state.items
   const graphWarning = graphAdapter?.inputWarning([...(graphTrace?.input.edges ?? []), ...(parsedGraph?.edges ?? [])])
-  const completionAnnouncement = knapsackTrace ? `Knapsack trace complete. Maximum value ${knapsackTrace.result.maximumValue}.`
+  const completionAnnouncement = knapsackTrace ? `Knapsack trace complete. Maximum value ${knapsackTrace.result.maximumValue}. Total selected weight ${knapsackTrace.result.totalSelectedWeight}. Selected items: ${knapsackTrace.result.selectedItems.length ? knapsackTrace.result.selectedItems.map(item => item.name).join(', ') : 'none'}.`
     : graphAdapter
     ? graphAdapter.completionAnnouncement
     : searchTrace
