@@ -13,6 +13,8 @@ keeping algorithm behavior separate from presentation and playback.
   preorder, inorder, or postorder operations one semantic step at a time.
 - Author weighted or unweighted undirected graphs and explore them with breadth-first search,
   iterative depth-first search, or Dijkstra pathfinding.
+- Solve an authored 0/1 Knapsack problem through bottom-up tabulation and deterministic solution
+  reconstruction, including every table decision and the final selected items.
 - Play, pause, reset, seek, step forward or backward, and adjust playback speed.
 - Inspect pseudocode, operation metrics, algorithm state, and explanatory text at every step.
 - Compare BFS's queue, DFS's stack, and Dijkstra's ordered priority frontier while retaining the
@@ -34,9 +36,10 @@ The frontend requests algorithm metadata and traces from the backend. During loc
 Vite proxies `/api` requests to the Spring Boot server at `http://localhost:8080`.
 
 The v2 API uses family-discriminated contracts for sorting, search, graph traversal, pathfinding,
-and trees. BFS and DFS remain `GRAPH_TRAVERSAL`; Dijkstra uses `PATHFINDING`; the binary search
-tree uses `TREE`. A trace contains immutable snapshots and typed semantic events, allowing the
-frontend to render any playback step without reimplementing the algorithm.
+trees, and dynamic programming. BFS and DFS remain `GRAPH_TRAVERSAL`; Dijkstra uses
+`PATHFINDING`; the binary search tree uses `TREE`; and 0/1 Knapsack uses
+`DYNAMIC_PROGRAMMING`. A trace contains immutable snapshots and typed semantic events, allowing
+the frontend to render any playback step without reimplementing the algorithm.
 
 See the [v2 API reference](./backend/API_V2.md), [v1 compatibility reference](./backend/API_V1.md),
 and [workbench user guide](./docs/USER_GUIDE.md) for complete contracts and behavior.
@@ -121,6 +124,13 @@ Lookup may complete either with a found value or a valid not-found result. Preor
 postorder each visit the same constructed tree in their respective defined orders; inorder output
 is strictly ascending.
 
+## 0/1 Knapsack input
+
+Author 1–10 named items with a positive whole-number weight and a non-negative whole-number value,
+then set a capacity from 0–20. The visualizer initializes the base cases, evaluates and commits
+each table cell in row-major order, then backtracks to show the selected items. When including and
+excluding an item yield the same value, it deterministically excludes that item.
+
 ## Roadmap
 
 | Algorithm family | Status | Direction |
@@ -130,7 +140,7 @@ is strictly ascending.
 | Graph traversal | Available | BFS and iterative DFS over weighted or unweighted undirected graphs. |
 | Pathfinding | Available | Dijkstra minimum-cost paths with tentative distances and relaxation steps. |
 | Trees | Available | Unbalanced binary search tree construction, lookup, preorder, inorder, and postorder traversal. |
-| Dynamic programming | Proposed | Reveal subproblems, table updates, and reconstructed solutions. |
+| Dynamic programming | Available | 0/1 Knapsack with authored items, bottom-up table updates, and reconstructed solutions. |
 | Data structures | Proposed | Visualize stack, queue, and linked-list operations with their changing state. |
 | Backtracking | Proposed | Explore choices, dead ends, and undo steps through a maze solver or N-Queens. |
 | Recursion and divide-and-conquer | Proposed | Expose call structure and recursive decomposition in algorithms such as merge sort and binary search. |
