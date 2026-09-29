@@ -12,21 +12,26 @@ public class KnapsackAlgorithm {
     public record Cell(int itemCount, int capacity) { }
 
     public record State(String kind, List<Item> items, int capacity, List<List<Integer>> table,
-            int activeItemCount, int activeCapacity, List<Cell> dependencyCells, String phase) {
+            int activeItemCount, int activeCapacity, List<Cell> dependencyCells, List<Item> selectedItems,
+            List<Integer> selectedItemIndices, String phase) {
         public State {
             items = List.copyOf(items);
             table = table.stream().map(List::copyOf).toList();
             dependencyCells = List.copyOf(dependencyCells);
+            selectedItems = List.copyOf(selectedItems);
+            selectedItemIndices = List.copyOf(selectedItemIndices);
         }
     }
 
     public record EventData(String kind, Integer excludeValue, Integer includeValue,
-            Integer committedValue, String selectedBranch, String unavailableCandidateReason) { }
+            Integer committedValue, String selectedBranch, String unavailableCandidateReason, String itemName) { }
 
     public record Event(int sequence, String type, String pseudocodeLineId, State state,
             EventData data) { }
 
-    public record Result(String kind, int maximumValue) { }
+    public record Result(String kind, int maximumValue, int totalSelectedWeight, List<Item> selectedItems) {
+        public Result { selectedItems = List.copyOf(selectedItems); }
+    }
 
     public record Trace(Result result, List<Event> events) {
         public Trace { events = List.copyOf(events); }
@@ -37,7 +42,7 @@ public class KnapsackAlgorithm {
         List<Event> events = new ArrayList<>();
         events.add(event(1, "BASE_CASES_INITIALIZED", "knapsack-initialize-base-cases", items, capacity,
                 table, 0, 0, List.of(), "BASE_CASES",
-                new EventData("BASE_CASES_INITIALIZED", null, null, null, null, null)));
+                List.of(), List.of(), new EventData("BASE_CASES_INITIALIZED", null, null, null, null, null, null)));
 
         int sequence = 2;
         for (int itemCount = 1; itemCount <= items.size(); itemCount++) {
@@ -56,18 +61,50 @@ public class KnapsackAlgorithm {
                 String unavailableReason = fits ? null : "Item weight exceeds this capacity";
                 events.add(event(sequence++, "CELL_EVALUATED", "knapsack-evaluate-cell", items, capacity,
                         table, itemCount, currentCapacity, dependencies, "TABULATION",
+                        List.of(), List.of(),
                         new EventData("CELL_EVALUATED", excludeValue, includeValue, null, branch,
-                                unavailableReason)));
+                                unavailableReason, item.name())));
 
                 int committedValue = "INCLUDE".equals(branch) ? includeValue : excludeValue;
                 table.get(itemCount).set(currentCapacity, committedValue);
                 events.add(event(sequence++, "CELL_COMMITTED", "knapsack-commit-cell", items, capacity,
                         table, itemCount, currentCapacity, dependencies, "TABULATION",
+                        List.of(), List.of(),
                         new EventData("CELL_COMMITTED", excludeValue, includeValue, committedValue, branch,
-                                unavailableReason)));
+                                unavailableReason, item.name())));
             }
         }
-        return new Trace(new Result("DYNAMIC_PROGRAMMING", table.getLast().get(capacity)), events);
+        List<Item> selectedItems = new ArrayList<>();
+        List<Integer> selectedItemIndices = new ArrayList<>();
+        int remainingCapacity = capacity;
+        events.add(event(sequence++, "RECONSTRUCTION_STARTED", "knapsack-reconstruct-start", items, capacity,
+                table, items.size(), remainingCapacity, List.of(), "RECONSTRUCTION", selectedItems,
+                selectedItemIndices,
+                new EventData("RECONSTRUCTION_STARTED", null, null, null, null, null, null)));
+        for (int itemCount = items.size(); itemCount >= 1; itemCount--) {
+            Item item = items.get(itemCount - 1);
+            boolean selected = table.get(itemCount).get(remainingCapacity)
+                    > table.get(itemCount - 1).get(remainingCapacity);
+            if (selected) {
+                selectedItems.addFirst(item);
+                selectedItemIndices.addFirst(itemCount - 1);
+            }
+            int nextCapacity = selected ? remainingCapacity - item.weight() : remainingCapacity;
+            String branch = selected ? "INCLUDE" : "EXCLUDE";
+            String type = selected ? "ITEM_SELECTED" : "ITEM_EXCLUDED";
+            events.add(event(sequence++, type, "knapsack-reconstruct-item", items, capacity, table, itemCount,
+                    remainingCapacity, List.of(new Cell(itemCount - 1, nextCapacity)), "RECONSTRUCTION",
+                    selectedItems, selectedItemIndices,
+                    new EventData(type, null, null, null, branch, null, item.name())));
+            remainingCapacity = nextCapacity;
+        }
+        events.add(event(sequence, "RECONSTRUCTION_COMPLETED", "knapsack-reconstruct-complete", items, capacity,
+                table, 0, remainingCapacity, List.of(), "RECONSTRUCTION", selectedItems,
+                selectedItemIndices,
+                new EventData("RECONSTRUCTION_COMPLETED", null, null, null, null, null, null)));
+        int totalSelectedWeight = selectedItems.stream().mapToInt(Item::weight).sum();
+        return new Trace(new Result("DYNAMIC_PROGRAMMING", table.getLast().get(capacity), totalSelectedWeight,
+                selectedItems), events);
     }
 
     private static List<List<Integer>> createTable(int itemCount, int capacity) {
@@ -82,9 +119,10 @@ public class KnapsackAlgorithm {
 
     private static Event event(int sequence, String type, String pseudocodeLineId, List<Item> items,
             int capacity, List<List<Integer>> table, int activeItemCount, int activeCapacity,
-            List<Cell> dependencyCells, String phase, EventData data) {
+            List<Cell> dependencyCells, String phase, List<Item> selectedItems,
+            List<Integer> selectedItemIndices, EventData data) {
         return new Event(sequence, type, pseudocodeLineId,
                 new State("DYNAMIC_PROGRAMMING", items, capacity, table, activeItemCount, activeCapacity,
-                        dependencyCells, phase), data);
+                        dependencyCells, selectedItems, selectedItemIndices, phase), data);
     }
 }

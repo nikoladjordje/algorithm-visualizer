@@ -222,3 +222,6 @@ footer { color: #8d928e; font: 10px 'DM Mono', monospace; text-align: center; te
 .knapsack-visualizer th { color: var(--ink); background: #e5e2db; }
 .knapsack-visualizer td[data-dependency] { border-style: dashed; border-width: 3px; }
 .knapsack-visualizer td[aria-current='true'] { outline: 4px solid var(--orange); outline-offset: -4px; font-weight: 700; }
+.knapsack-visualizer tr[data-selected] th { box-shadow: inset 4px 0 var(--orange); }
+.knapsack-selection, .knapsack-result { margin: 0; padding: 12px; border: 1px solid #d8d5cd; background: #fffdf8; display: flex; gap: 12px; flex-wrap: wrap; }
+.knapsack-result { border-top: 0; flex-direction: column; gap: 4px; }

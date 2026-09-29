@@ -52,7 +52,7 @@ class AlgorithmControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"kind\":\"DYNAMIC_PROGRAMMING\",\"items\":[{\"name\":\"Map\",\"weight\":1,\"value\":4},{\"name\":\"Compass\",\"weight\":2,\"value\":5}],\"capacity\":3}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.events.length()").value(13))
+                .andExpect(jsonPath("$.events.length()").value(17))
                 .andExpect(jsonPath("$.events[1].data.selectedBranch").value("INCLUDE"))
                 .andExpect(jsonPath("$.events[11].state.dependencyCells[1].capacity").value(1))
                 .andExpect(jsonPath("$.result.maximumValue").value(9));
