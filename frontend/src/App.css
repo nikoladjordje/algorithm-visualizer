@@ -230,3 +230,6 @@ footer { color: #8d928e; font: 10px 'DM Mono', monospace; text-align: center; te
 .knapsack-item-rows fieldset { display: flex; gap: 8px; flex-wrap: wrap; border: 1px solid #d8d5cd; }
 .knapsack-item-rows label { display: grid; gap: 4px; font-size: .85rem; }
 .draft-changed { margin: 8px 0 0; color: var(--orange); }
+.input-panel:has(option[value='PUSH']:checked) .input-row:has(#array-input) {
+  display: none;
+}

@@ -238,7 +238,7 @@ class AlgorithmControllerTests {
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(13))
+                .andExpect(jsonPath("$.length()").value(14))
                 .andExpect(jsonPath("$[0].id").value("insertion"))
                 .andExpect(jsonPath("$[1].id").value("selection"))
                 .andExpect(jsonPath("$[2].id").value("bubble"))
@@ -273,7 +273,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeBreadthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(13))
+                .andExpect(jsonPath("$.length()").value(14))
                 .andExpect(jsonPath("$[8].id").value("bfs"))
                 .andExpect(jsonPath("$[8].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[8].constraints.kind").value("GRAPH_TRAVERSAL"));
@@ -309,7 +309,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeIterativeDepthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(13))
+                .andExpect(jsonPath("$.length()").value(14))
                 .andExpect(jsonPath("$[9].id").value("dfs"))
                 .andExpect(jsonPath("$[9].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[9].constraints.kind").value("GRAPH_TRAVERSAL"))

@@ -18,7 +18,7 @@ final class V2Contracts {
     }
 
     sealed interface Constraints permits SortingConstraints, GraphTraversalConstraints,
-            PathfindingConstraints, SearchConstraints, TreeConstraints, DynamicProgrammingConstraints {
+            PathfindingConstraints, SearchConstraints, TreeConstraints, DynamicProgrammingConstraints, DataStructureConstraints {
         String kind();
     }
 
@@ -43,6 +43,10 @@ final class V2Contracts {
 
     record DynamicProgrammingConstraints(String kind, int minimumItems, int maximumItems,
             int minimumCapacity, int maximumCapacity, int minimumWeight, int minimumValue) implements Constraints { }
+    record DataStructureConstraints(String kind, int minimumOperations, int maximumOperations,
+            int minimumValueLength, int maximumValueLength, List<String> operations) implements Constraints {
+        DataStructureConstraints { operations = List.copyOf(operations); }
+    }
 
     record AlgorithmInfo(String id, String name, String family) {
     }
@@ -79,6 +83,15 @@ final class V2Contracts {
             com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm.Result result, Limits limits,
             List<com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm.Event> events) {
         DynamicProgrammingTrace { events = List.copyOf(events); }
+    }
+    record StructureOperation(String kind, String value) { }
+    record DataStructureInput(String kind, List<StructureOperation> operations) {
+        DataStructureInput { operations = List.copyOf(operations); }
+    }
+    record DataStructureTrace(String apiVersion, AlgorithmInfo algorithm, DataStructureInput input,
+            com.nikola.algorithmvisualizer.datastructures.StackAlgorithm.Result result, Limits limits,
+            List<com.nikola.algorithmvisualizer.datastructures.StackAlgorithm.Event> events) {
+        DataStructureTrace { events = List.copyOf(events); }
     }
 
     record Limits(int maximumEvents) {

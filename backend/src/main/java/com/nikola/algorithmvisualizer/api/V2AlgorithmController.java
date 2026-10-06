@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.nikola.algorithmvisualizer.algorithm.AlgorithmRegistry;
 import com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm;
+import com.nikola.algorithmvisualizer.datastructures.StackAlgorithm;
 import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
@@ -47,6 +48,7 @@ public class V2AlgorithmController {
     private static final String SEARCH = "SEARCH";
     private static final String TREE = "TREE";
     private static final String DYNAMIC_PROGRAMMING = "DYNAMIC_PROGRAMMING";
+    private static final String DATA_STRUCTURES = "DATA_STRUCTURES";
     private static final int MAXIMUM_EVENTS = 10_000;
     private final AlgorithmRegistry registry;
     private final BreadthFirstSearchAlgorithm breadthFirstSearch;
@@ -56,11 +58,13 @@ public class V2AlgorithmController {
     private final BinarySearchAlgorithm binarySearch;
     private final BinarySearchTreeAlgorithm binarySearchTree;
     private final KnapsackAlgorithm knapsack;
+    private final StackAlgorithm stack;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
             DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch,
-            BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree, KnapsackAlgorithm knapsack) {
+            BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree, KnapsackAlgorithm knapsack,
+            StackAlgorithm stack) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
@@ -69,6 +73,7 @@ public class V2AlgorithmController {
         this.binarySearch = binarySearch;
         this.binarySearchTree = binarySearchTree;
         this.knapsack = knapsack;
+        this.stack = stack;
     }
 
     @GetMapping
@@ -95,6 +100,9 @@ public class V2AlgorithmController {
         catalog.add(new V2Contracts.CatalogEntry("binary-search-tree", "Binary Search Tree", TREE, "2.0",
                 new V2Contracts.TreeConstraints(TREE, 1, 31, Integer.MIN_VALUE, Integer.MAX_VALUE, true,
                         List.of("PREORDER", "INORDER", "POSTORDER", "LOOKUP"))));
+        catalog.add(new V2Contracts.CatalogEntry("stack", "Stack", DATA_STRUCTURES, "2.0",
+                new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
+                        List.of("PUSH", "POP", "PEEK"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
                 new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
@@ -132,6 +140,22 @@ public class V2AlgorithmController {
                     new V2Contracts.AlgorithmInfo("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING),
                     new V2Contracts.DynamicProgrammingInput(DYNAMIC_PROGRAMMING, request.items(), request.capacity()),
                     knapsackTrace.result(), new V2Contracts.Limits(MAXIMUM_EVENTS), knapsackTrace.events());
+        }
+        if ("stack".equals(algorithmId)) {
+            if (!DATA_STRUCTURES.equals(request.kind())) {
+                throw new AlgorithmFamilyMismatchException(algorithmId, DATA_STRUCTURES);
+            }
+            validateStack(request);
+            var operations = request.operations().stream()
+                    .map(operation -> new StackAlgorithm.Operation(operation.kind(), operation.value())).toList();
+            var stackTrace = stack.execute(operations);
+            if (stackTrace.events().size() > MAXIMUM_EVENTS) {
+                throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            }
+            return new V2Contracts.DataStructureTrace("2.0",
+                    new V2Contracts.AlgorithmInfo("stack", "Stack", DATA_STRUCTURES),
+                    new V2Contracts.DataStructureInput(DATA_STRUCTURES, request.operations()), stackTrace.result(),
+                    new V2Contracts.Limits(MAXIMUM_EVENTS), stackTrace.events());
         }
         if ("bfs".equals(algorithmId)) {
             if (!GRAPH_TRAVERSAL.equals(request.kind())) {
@@ -327,6 +351,26 @@ public class V2AlgorithmController {
         }
     }
 
+    private static void validateStack(V2Request request) {
+        if (request.operations() == null || request.operations().isEmpty() || request.operations().size() > 50) {
+            throw new GraphValidationException("operations", "Provide from 1 through 50 stack operations");
+        }
+        for (int index = 0; index < request.operations().size(); index++) {
+            var operation = request.operations().get(index);
+            String field = "operations[" + index + "]";
+            if (operation == null || !List.of("PUSH", "POP", "PEEK").contains(operation.kind())) {
+                throw new GraphValidationException(field + ".kind", "Use PUSH, POP, or PEEK");
+            }
+            if ("PUSH".equals(operation.kind()) && (operation.value() == null || operation.value().isBlank()
+                    || operation.value().length() > 40)) {
+                throw new GraphValidationException(field + ".value", "Push values must contain 1 through 40 characters");
+            }
+            if (!"PUSH".equals(operation.kind()) && operation.value() != null) {
+                throw new GraphValidationException(field + ".value", "Only PUSH accepts a structure value");
+            }
+        }
+    }
+
     private static V2Contracts.SortingEvent toV2Event(SemanticEvent<?> event) {
         return new V2Contracts.SortingEvent(event.sequence(), event.type().name(),
                 event.pseudocodeLineId(),
@@ -380,5 +424,6 @@ public class V2AlgorithmController {
     public record V2Request(String kind, List<Integer> values, Integer target, List<String> nodes,
             List<V2Contracts.GraphEdge> edges, String startNode, String destination,
             List<Integer> insertionValues, V2Contracts.TreeOperation operation,
-            List<V2Contracts.KnapsackItem> items, Integer capacity) { }
+            List<V2Contracts.KnapsackItem> items, Integer capacity,
+            List<V2Contracts.StructureOperation> operations) { }
 }

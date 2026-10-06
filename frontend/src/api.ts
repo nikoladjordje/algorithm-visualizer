@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, DepthFirstSearchTrace, DynamicProgrammingTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, KnapsackItem, PathfindingTrace, ProblemDetail, SearchTrace, TreeOperation, TreeTrace } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureTrace, DepthFirstSearchTrace, DynamicProgrammingTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, KnapsackItem, PathfindingTrace, ProblemDetail, SearchTrace, StructureOperation, TreeOperation, TreeTrace } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -67,6 +67,9 @@ export async function createTreeTrace(insertionValues: number[], operation: Tree
 export async function createKnapsackTrace(items: KnapsackItem[], capacity: number, signal?: AbortSignal): Promise<DynamicProgrammingTrace> {
   return requestTrace('/api/v2/algorithms/zero-one-knapsack/trace', { kind: 'DYNAMIC_PROGRAMMING', items, capacity }, signal) as Promise<DynamicProgrammingTrace>
 }
+export async function createStackTrace(operations: StructureOperation[], signal?: AbortSignal): Promise<DataStructureTrace> {
+  return requestTrace('/api/v2/algorithms/stack/trace', { kind: 'DATA_STRUCTURES', operations }, signal) as Promise<DataStructureTrace>
+}
 
 export async function createGraphTraversalTrace(
   graph: { nodes: string[]; edges: GraphEdge[]; startNode: string; destination?: string },
@@ -95,7 +98,7 @@ export async function createDijkstraTrace(
   }, signal) as Promise<PathfindingTrace>
 }
 
-async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace | DynamicProgrammingTrace> {
+async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace | DynamicProgrammingTrace | DataStructureTrace> {
   let response: Response
   try {
     response = await fetch(url, {
@@ -108,7 +111,7 @@ async function requestTrace(url: string, body: unknown, signal?: AbortSignal): P
   if (response.ok) {
     const trace = await response.json() as { apiVersion?: string }
     if (trace.apiVersion !== '2.0') throw new TraceRequestError(`Unsupported trace API version: ${trace.apiVersion ?? 'missing'}.`, 'unavailable')
-    return trace as AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace | DynamicProgrammingTrace
+    return trace as AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace | DynamicProgrammingTrace | DataStructureTrace
   }
   const problem = await readProblem(response)
   if (response.status >= 400 && response.status < 500) throw new TraceRequestError(problem?.detail ?? 'Check the input and try again.', 'validation', problem)

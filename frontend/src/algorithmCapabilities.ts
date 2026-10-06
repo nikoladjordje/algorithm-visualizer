@@ -5,6 +5,7 @@ import type { GraphAlgorithmAdapter } from './graphAdapters'
 import type { AlgorithmCatalogEntry } from './types'
 import { treeAdapter } from './treeAdapter'
 import { knapsackAdapter } from './knapsackAdapter'
+import { stackAdapter } from './stackAdapter'
 
 export type AlgorithmCapability =
   | { family: 'SORTING'; adapter: AlgorithmAdapter }
@@ -13,6 +14,7 @@ export type AlgorithmCapability =
   | { family: 'PATHFINDING'; adapter: GraphAlgorithmAdapter }
   | { family: 'TREE'; adapter: typeof treeAdapter }
   | { family: 'DYNAMIC_PROGRAMMING'; adapter: typeof knapsackAdapter }
+  | { family: 'DATA_STRUCTURES'; adapter: typeof stackAdapter }
 
 export function resolveAlgorithmAdapter(entry?: AlgorithmCatalogEntry): AlgorithmCapability | undefined {
   if (!entry || entry.contractVersion !== '2.0') return undefined
@@ -23,6 +25,7 @@ export function resolveAlgorithmAdapter(entry?: AlgorithmCatalogEntry): Algorith
   if (entry.family === 'SEARCH' && entry.id === 'binary-search') return { family: 'SEARCH', adapter: binarySearchAdapter }
   if (entry.family === 'TREE' && entry.id === 'binary-search-tree') return { family: 'TREE', adapter: treeAdapter }
   if (entry.family === 'DYNAMIC_PROGRAMMING' && entry.id === 'zero-one-knapsack') return { family: 'DYNAMIC_PROGRAMMING', adapter: knapsackAdapter }
+  if (entry.family === 'DATA_STRUCTURES' && entry.id === 'stack') return { family: 'DATA_STRUCTURES', adapter: stackAdapter }
   const adapter = graphAdapters.get(entry.id)
   if (adapter && entry.family === adapter.family && entry.contractVersion === adapter.contractVersion) {
     return { family: adapter.family, adapter }
