@@ -55,7 +55,16 @@ function App() {
   useEffect(() => { fetchAlgorithmCatalog().then(entries => { const supported = entries.filter(e => resolveAlgorithmAdapter(e)); setCatalog(supported); const requested = new URLSearchParams(location.search).get('algorithm') ?? 'insertion'; const selected = supported.some(e => e.id === requested) ? requested : supported[0]?.id; if (selected) setAlgorithmId(selected) }).catch(() => setCatalogError(true)) }, [])
   useEffect(() => { if (!playing || !trace || atEnd) return; const timer = setTimeout(() => setStep(s => nextStep(s, trace.events.length)), speed); return () => clearTimeout(timer) }, [playing, trace, atEnd, speed, step])
   function clearRun() { abortRef.current?.abort(); requestRef.current++; setTrace(null); setStep(-1); setPlaying(false); setRequestState('empty'); setInputError('') }
-  function changeAlgorithm(id: string) { clearRun(); setAlgorithmId(id); const url = new URL(location.href); url.searchParams.set('algorithm', id); history.replaceState(null, '', url) }
+  function changeAlgorithm(id: string) {
+    const changingStructure = (algorithmId === 'stack' || algorithmId === 'queue') && (id === 'stack' || id === 'queue') && id !== algorithmId
+    if (changingStructure) {
+      const currentOperations = algorithmId === 'queue' ? queueOperations : stackOperations
+      const currentName = algorithmId === 'queue' ? 'Queue' : 'Stack', nextName = id === 'queue' ? 'Queue' : 'Stack'
+      if (currentOperations.length && !window.confirm(`Changing from ${currentName} to ${nextName} will discard this operation sequence. Continue?`)) return
+      setStackOperations([]); setQueueOperations([]); setStackCommands(''); setQueueCommands('')
+    }
+    clearRun(); setAlgorithmId(id); const url = new URL(location.href); url.searchParams.set('algorithm', id); history.replaceState(null, '', url)
+  }
   function changeGraphInput(value: string) { const graph = parseGraphInput(value); setGraphInput(value); setSelectedStart(current => graph?.nodes.includes(current) ? current : graph?.nodes[0] ?? ''); setSelectedDestination(current => graph?.nodes.includes(current) ? current : '') }
   function applyGraphPreset(preset: GraphPreset) { clearRun(); setGraphInput(preset.input); setSelectedStart(preset.startNode); setSelectedDestination(preset.destination ?? '') }
   function applySearchPreset(preset: SearchPreset) { clearRun(); setSearchInput(preset.values.join(', ')); setSearchTarget(String(preset.target)) }

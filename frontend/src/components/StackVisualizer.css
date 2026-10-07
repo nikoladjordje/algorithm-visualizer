@@ -1,0 +1,4 @@
+.stack-visualizer { min-height: 180px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px; border: 1px solid #e3e0d8; background: #f5f2eb; color: var(--ink); font: 12px 'DM Mono', monospace; }
+.stack-visualizer p { margin: 0; color: var(--muted); }
+.stack-visualizer ol { display: flex; flex-direction: column; gap: 8px; min-height: 52px; margin: 0; padding: 0; list-style: none; }
+.stack-visualizer li { display: grid; min-width: 88px; place-items: center; gap: 4px; padding: 8px; border: 2px solid var(--green); background: #e1ece7; }

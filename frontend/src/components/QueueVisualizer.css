@@ -2,4 +2,4 @@
 .queue-visualizer > div { min-width: 90px; }
 .queue-visualizer p { color: var(--muted); }
 .queue-visualizer ol { display: flex; flex: 1; gap: 8px; min-height: 52px; margin: 0; padding: 0; list-style: none; }
-.queue-visualizer li { display: grid; min-width: 56px; place-items: center; padding: 8px; border: 2px solid var(--green); background: #e1ece7; }
+.queue-visualizer li { display: grid; min-width: 56px; place-items: center; gap: 4px; padding: 8px; border: 2px solid var(--green); background: #e1ece7; }

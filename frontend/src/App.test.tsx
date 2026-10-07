@@ -501,13 +501,30 @@ describe('App algorithm workbench',()=>{
   await user.click(screen.getByRole('button', { name: 'Visualize Queue' }))
   expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'DATA_STRUCTURES', operations: [{ kind: 'ENQUEUE', value: 'A' }, { kind: 'PEEK' }, { kind: 'DEQUEUE' }] })
   await user.click(screen.getByRole('button', { name: 'Next step' }))
-  expect(await screen.findByRole('img', { name: 'Queue, Front A, rear A' })).toBeInTheDocument()
+  expect(await screen.findByRole('img', { name: 'Queue, Front A, rear A. Values from front: A.' })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Next step' }))
-  expect(screen.getByRole('img', { name: 'Queue, Front B, rear B' })).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Queue, Front B, rear B. Values from front: B.' })).toBeInTheDocument()
   expect(screen.getAllByText('Queue sequence complete. Front B; rear B.')).toHaveLength(2)
   expect(screen.getAllByRole('status')).toEqual(expect.arrayContaining([
    expect.objectContaining({ textContent: 'Queue sequence complete. Front B; rear B.' }),
   ]))
+ })
+ it('confirms before replacing a Stack draft with an empty Queue sequence', async () => {
+  const stackCatalog = { id: 'stack', name: 'Stack', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PUSH', 'POP', 'PEEK'] } }
+  const queueCatalog = { id: 'queue', name: 'Queue', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ENQUEUE', 'DEQUEUE', 'PEEK'] } }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([...catalog, stackCatalog, queueCatalog]), { headers: { 'Content-Type': 'application/json' } })))
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'stack')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'queue')
+  expect(confirm).toHaveBeenCalledWith('Changing from Stack to Queue will discard this operation sequence. Continue?')
+  expect(screen.getByText('Stack operations')).toBeInTheDocument()
+
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'queue')
+  expect(screen.getByText('Queue operations')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Enqueue value 1')).not.toBeInTheDocument()
  })
  it('synchronizes Queue rows with text commands and retains the last valid sequence for invalid text', async () => {
   const queueCatalog = { id: 'queue', name: 'Queue', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ENQUEUE', 'DEQUEUE', 'PEEK'] } }
