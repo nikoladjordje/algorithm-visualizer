@@ -509,4 +509,42 @@ describe('App algorithm workbench',()=>{
    expect.objectContaining({ textContent: 'Queue sequence complete. Front B; rear B.' }),
   ]))
  })
+ it('synchronizes Queue rows with text commands and retains the last valid sequence for invalid text', async () => {
+  const queueCatalog = { id: 'queue', name: 'Queue', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ENQUEUE', 'DEQUEUE', 'PEEK'] } }
+  const queueTrace = { apiVersion: '2.0', algorithm: { id: 'queue', name: 'Queue', family: 'DATA_STRUCTURES' }, input: { kind: 'DATA_STRUCTURES', operations: [{ kind: 'ENQUEUE', value: 'A' }, { kind: 'PEEK' }] }, result: { kind: 'DATA_STRUCTURES', values: ['A'], occurrenceIds: [1], outcomes: ['A', 'A'] }, limits: { maximumEvents: 10000 }, events: [] }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, queueCatalog] : queueTrace), { headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'queue')
+  const commands = screen.getByLabelText('Text commands')
+  await user.clear(commands)
+  await user.type(commands, 'enqueue("A"){enter}peek()')
+  expect(screen.getByLabelText('Operation 2')).toHaveValue('PEEK')
+  await user.selectOptions(screen.getByLabelText('Operation 2'), 'DEQUEUE')
+  expect(commands).toHaveValue('enqueue("A")\ndequeue()')
+  await user.clear(commands)
+  await user.type(commands, 'enqueue()')
+  expect(screen.getByRole('alert')).toHaveTextContent('Line 1: enqueue requires one quoted label.')
+  await user.click(screen.getByRole('button', { name: 'Visualize Queue' }))
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'DATA_STRUCTURES', operations: [{ kind: 'ENQUEUE', value: 'A' }, { kind: 'DEQUEUE' }] })
+ })
+ it('submits the last valid Stack commands after a keyboard-authored text error', async () => {
+  const stackCatalog = { id: 'stack', name: 'Stack', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PUSH', 'POP', 'PEEK'] } }
+  const stackTrace = { apiVersion: '2.0', algorithm: { id: 'stack', name: 'Stack', family: 'DATA_STRUCTURES' }, input: { kind: 'DATA_STRUCTURES', operations: [{ kind: 'PUSH', value: 'A' }, { kind: 'POP' }] }, result: { kind: 'DATA_STRUCTURES', values: [], occurrenceIds: [], outcomes: ['A', 'A'] }, limits: { maximumEvents: 10000 }, events: [] }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, stackCatalog] : stackTrace), { headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'stack')
+  const commands = screen.getByLabelText('Text commands')
+  await user.clear(commands)
+  await user.type(commands, 'push("A"){enter}pop()')
+  expect(screen.getByLabelText('Operation 2')).toHaveValue('POP')
+  await user.clear(commands)
+  await user.type(commands, 'push()')
+  expect(screen.getByRole('alert')).toHaveTextContent('Line 1: push requires one quoted label.')
+  await user.click(screen.getByRole('button', { name: 'Visualize Stack' }))
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'DATA_STRUCTURES', operations: [{ kind: 'PUSH', value: 'A' }, { kind: 'POP' }] })
+ })
 })
