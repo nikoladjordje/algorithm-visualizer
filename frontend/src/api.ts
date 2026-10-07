@@ -70,6 +70,9 @@ export async function createKnapsackTrace(items: KnapsackItem[], capacity: numbe
 export async function createStackTrace(operations: StructureOperation[], signal?: AbortSignal): Promise<DataStructureTrace> {
   return requestTrace('/api/v2/algorithms/stack/trace', { kind: 'DATA_STRUCTURES', operations }, signal) as Promise<DataStructureTrace>
 }
+export async function createQueueTrace(operations: StructureOperation[], signal?: AbortSignal): Promise<DataStructureTrace> {
+  return requestTrace('/api/v2/algorithms/queue/trace', { kind: 'DATA_STRUCTURES', operations }, signal) as Promise<DataStructureTrace>
+}
 
 export async function createGraphTraversalTrace(
   graph: { nodes: string[]; edges: GraphEdge[]; startNode: string; destination?: string },

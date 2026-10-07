@@ -89,8 +89,7 @@ final class V2Contracts {
         DataStructureInput { operations = List.copyOf(operations); }
     }
     record DataStructureTrace(String apiVersion, AlgorithmInfo algorithm, DataStructureInput input,
-            com.nikola.algorithmvisualizer.datastructures.StackAlgorithm.Result result, Limits limits,
-            List<com.nikola.algorithmvisualizer.datastructures.StackAlgorithm.Event> events) {
+            Object result, Limits limits, List<?> events) {
         DataStructureTrace { events = List.copyOf(events); }
     }
 

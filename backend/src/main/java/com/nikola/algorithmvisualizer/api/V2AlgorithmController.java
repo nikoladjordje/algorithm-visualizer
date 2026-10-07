@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.nikola.algorithmvisualizer.algorithm.AlgorithmRegistry;
 import com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.StackAlgorithm;
+import com.nikola.algorithmvisualizer.datastructures.QueueAlgorithm;
 import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
@@ -59,12 +60,13 @@ public class V2AlgorithmController {
     private final BinarySearchTreeAlgorithm binarySearchTree;
     private final KnapsackAlgorithm knapsack;
     private final StackAlgorithm stack;
+    private final QueueAlgorithm queue;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
             DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch,
             BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree, KnapsackAlgorithm knapsack,
-            StackAlgorithm stack) {
+            StackAlgorithm stack, QueueAlgorithm queue) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
@@ -74,6 +76,7 @@ public class V2AlgorithmController {
         this.binarySearchTree = binarySearchTree;
         this.knapsack = knapsack;
         this.stack = stack;
+        this.queue = queue;
     }
 
     @GetMapping
@@ -103,6 +106,9 @@ public class V2AlgorithmController {
         catalog.add(new V2Contracts.CatalogEntry("stack", "Stack", DATA_STRUCTURES, "2.0",
                 new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
                         List.of("PUSH", "POP", "PEEK"))));
+        catalog.add(new V2Contracts.CatalogEntry("queue", "Queue", DATA_STRUCTURES, "2.0",
+                new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
+                        List.of("ENQUEUE", "DEQUEUE", "PEEK"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
                 new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
@@ -145,7 +151,7 @@ public class V2AlgorithmController {
             if (!DATA_STRUCTURES.equals(request.kind())) {
                 throw new AlgorithmFamilyMismatchException(algorithmId, DATA_STRUCTURES);
             }
-            validateStack(request);
+            validateStructure(request, "stack", List.of("PUSH", "POP", "PEEK"), "PUSH");
             var operations = request.operations().stream()
                     .map(operation -> new StackAlgorithm.Operation(operation.kind(), operation.value())).toList();
             var stackTrace = stack.execute(operations);
@@ -156,6 +162,22 @@ public class V2AlgorithmController {
                     new V2Contracts.AlgorithmInfo("stack", "Stack", DATA_STRUCTURES),
                     new V2Contracts.DataStructureInput(DATA_STRUCTURES, request.operations()), stackTrace.result(),
                     new V2Contracts.Limits(MAXIMUM_EVENTS), stackTrace.events());
+        }
+        if ("queue".equals(algorithmId)) {
+            if (!DATA_STRUCTURES.equals(request.kind())) {
+                throw new AlgorithmFamilyMismatchException(algorithmId, DATA_STRUCTURES);
+            }
+            validateStructure(request, "queue", List.of("ENQUEUE", "DEQUEUE", "PEEK"), "ENQUEUE");
+            var operations = request.operations().stream()
+                    .map(operation -> new QueueAlgorithm.Operation(operation.kind(), operation.value())).toList();
+            var queueTrace = queue.execute(operations);
+            if (queueTrace.events().size() > MAXIMUM_EVENTS) {
+                throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            }
+            return new V2Contracts.DataStructureTrace("2.0",
+                    new V2Contracts.AlgorithmInfo("queue", "Queue", DATA_STRUCTURES),
+                    new V2Contracts.DataStructureInput(DATA_STRUCTURES, request.operations()), queueTrace.result(),
+                    new V2Contracts.Limits(MAXIMUM_EVENTS), queueTrace.events());
         }
         if ("bfs".equals(algorithmId)) {
             if (!GRAPH_TRAVERSAL.equals(request.kind())) {
@@ -351,22 +373,23 @@ public class V2AlgorithmController {
         }
     }
 
-    private static void validateStack(V2Request request) {
+    private static void validateStructure(V2Request request, String structureName, List<String> allowedOperations,
+            String valueOperation) {
         if (request.operations() == null || request.operations().isEmpty() || request.operations().size() > 50) {
-            throw new GraphValidationException("operations", "Provide from 1 through 50 stack operations");
+            throw new GraphValidationException("operations", "Provide from 1 through 50 " + structureName + " operations");
         }
         for (int index = 0; index < request.operations().size(); index++) {
             var operation = request.operations().get(index);
             String field = "operations[" + index + "]";
-            if (operation == null || !List.of("PUSH", "POP", "PEEK").contains(operation.kind())) {
-                throw new GraphValidationException(field + ".kind", "Use PUSH, POP, or PEEK");
+            if (operation == null || !allowedOperations.contains(operation.kind())) {
+                throw new GraphValidationException(field + ".kind", "Use " + String.join(", ", allowedOperations));
             }
-            if ("PUSH".equals(operation.kind()) && (operation.value() == null || operation.value().isBlank()
+            if (valueOperation.equals(operation.kind()) && (operation.value() == null || operation.value().isBlank()
                     || operation.value().length() > 40)) {
-                throw new GraphValidationException(field + ".value", "Push values must contain 1 through 40 characters");
+                throw new GraphValidationException(field + ".value", structureName + " values must contain 1 through 40 characters");
             }
-            if (!"PUSH".equals(operation.kind()) && operation.value() != null) {
-                throw new GraphValidationException(field + ".value", "Only PUSH accepts a structure value");
+            if (!valueOperation.equals(operation.kind()) && operation.value() != null) {
+                throw new GraphValidationException(field + ".value", "Only " + valueOperation + " accepts a structure value");
             }
         }
     }

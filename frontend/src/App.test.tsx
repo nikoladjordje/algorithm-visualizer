@@ -488,4 +488,25 @@ describe('App algorithm workbench',()=>{
   expect(screen.getByText('Depth-first traversal is complete. Unreachable nodes: Z.')).toBeInTheDocument()
   expect(screen.getByText('Z', { selector: 'dd' })).toBeInTheDocument()
  })
+ it('authors and plays a Queue trace with Front-to-rear state', async () => {
+  const queueCatalog = { id: 'queue', name: 'Queue', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ENQUEUE', 'DEQUEUE', 'PEEK'] } }
+  const queueTrace = { apiVersion: '2.0', algorithm: { id: 'queue', name: 'Queue', family: 'DATA_STRUCTURES' }, input: { kind: 'DATA_STRUCTURES', operations: [{ kind: 'ENQUEUE', value: 'A' }, { kind: 'ENQUEUE', value: 'B' }, { kind: 'DEQUEUE' }] }, result: { kind: 'DATA_STRUCTURES', values: ['B'], occurrenceIds: [2], outcomes: ['A', 'B', 'A'] }, limits: { maximumEvents: 10000 }, events: [{ sequence: 1, type: 'ENQUEUE', pseudocodeLineId: 'queue-enqueue', state: { kind: 'DATA_STRUCTURES', values: ['A'], occurrenceIds: [1], activeOperationIndex: 0 }, data: { kind: 'ENQUEUE', operation: 'ENQUEUE', value: 'A', occurrenceId: 1, outcome: 'A' } }, { sequence: 2, type: 'DEQUEUE', pseudocodeLineId: 'queue-dequeue', state: { kind: 'DATA_STRUCTURES', values: ['B'], occurrenceIds: [2], activeOperationIndex: 2 }, data: { kind: 'DEQUEUE', operation: 'DEQUEUE', value: 'A', occurrenceId: 1, outcome: 'A' } }] }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, queueCatalog] : queueTrace), { headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'queue')
+  expect(screen.getByText('Queue operations')).toBeInTheDocument()
+  expect(screen.getByLabelText('Enqueue value 1')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Visualize Queue' }))
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'DATA_STRUCTURES', operations: [{ kind: 'ENQUEUE', value: 'A' }, { kind: 'PEEK' }, { kind: 'DEQUEUE' }] })
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(await screen.findByRole('img', { name: 'Queue, Front A, rear A' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByRole('img', { name: 'Queue, Front B, rear B' })).toBeInTheDocument()
+  expect(screen.getAllByText('Queue sequence complete. Front B; rear B.')).toHaveLength(2)
+  expect(screen.getAllByRole('status')).toEqual(expect.arrayContaining([
+   expect.objectContaining({ textContent: 'Queue sequence complete. Front B; rear B.' }),
+  ]))
+ })
 })
