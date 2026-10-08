@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createAlgorithmTrace, createKnapsackTrace, createQueueTrace, createSearchTrace, createStackTrace, createTreeTrace, fetchAlgorithmCatalog, TraceRequestError } from './api'
+import { createAlgorithmTrace, createKnapsackTrace, createSearchTrace, createTreeTrace, fetchAlgorithmCatalog, TraceRequestError } from './api'
 import { adapters } from './adapters'
 import { ArrayVisualizer } from './components/ArrayVisualizer'
 import { SearchVisualizer } from './components/SearchVisualizer'
@@ -8,14 +8,14 @@ import { GraphVisualizer } from './components/GraphVisualizer'
 import { TreeVisualizer } from './components/TreeVisualizer'
 import { KnapsackVisualizer } from './components/KnapsackVisualizer'
 import { KnapsackAuthoring } from './components/KnapsackAuthoring'
-import { StackVisualizer } from './components/StackVisualizer'
-import { QueueVisualizer } from './components/QueueVisualizer'
+import { StructureAuthoring } from './components/StructureAuthoring'
 import { PlaybackControls } from './components/PlaybackControls'
 import { PseudocodePanel } from './components/PseudocodePanel'
 import { Timeline } from './components/Timeline'
 import { parseGraphInput, parseIntegerList, validateGraphInput } from './input'
 import { parseStructureCommands, serializeStructureCommands } from './structureCommands'
 import { resolveAlgorithmAdapter } from './algorithmCapabilities'
+import { dataStructureCapabilities } from './dataStructureCapabilities'
 import type { GraphPreset } from './graphPresets'
 import type { SearchPreset } from './searchPresets'
 import { searchPresets } from './searchPresets'
@@ -24,31 +24,32 @@ import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureTrace, Dynamic
 import './App.css'
 const SAMPLE_INPUT = '8, 3, 5, 1, 9, 6, 2, 7, 4'
 type RequestState = 'empty' | 'loading' | 'ready' | 'unavailable'
+type StructureDraft = { operations: StructureOperation[]; commands: string }
+const initialStructureDrafts: Record<'stack' | 'queue', StructureDraft> = {
+  stack: { operations: [{ kind: 'PUSH', value: 'A' }, { kind: 'PEEK' }, { kind: 'POP' }], commands: 'push("A")\npeek()\npop()' },
+  queue: { operations: [{ kind: 'ENQUEUE', value: 'A' }, { kind: 'PEEK' }, { kind: 'DEQUEUE' }], commands: 'enqueue("A")\npeek()\ndequeue()' },
+}
 const metricEvent: Record<MetricType, string> = { COMPARISONS: 'COMPARE', READS: 'READ', WRITES: 'WRITE', SWAPS: 'SWAP' }
 function App() {
-  // The hidden legacy textarea shares this transitional state while the row editor is active.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [input, setInput] = useState(SAMPLE_INPUT), [searchInput, setSearchInput] = useState('8, 3, 5, 1'), [treeInput, setTreeInput] = useState('8, 3, 10, 1, 6'), [treeOperation, setTreeOperation] = useState<TreeOperation['kind']>('PREORDER'), [lookupTarget, setLookupTarget] = useState('5'), [searchTarget, setSearchTarget] = useState('5'), [graphInput, setGraphInput] = useState('A'), [selectedStart, setSelectedStart] = useState('A'), [selectedDestination, setSelectedDestination] = useState(''), [knapsackItems, setKnapsackItems] = useState<any>([{ name: 'Map', weight: 1, value: 4 }, { name: 'Compass', weight: 2, value: 5 }]), [knapsackCapacity, setKnapsackCapacity] = useState('3'), [knapsackDraftChanged, setKnapsackDraftChanged] = useState(false), [stackOperations, setStackOperations] = useState<StructureOperation[]>([{ kind: 'PUSH', value: 'A' }, { kind: 'PEEK' }, { kind: 'POP' }]), [queueOperations, setQueueOperations] = useState<StructureOperation[]>([{ kind: 'ENQUEUE', value: 'A' }, { kind: 'PEEK' }, { kind: 'DEQUEUE' }]), [stackCommands, setStackCommands] = useState('push("A")\npeek()\npop()'), [queueCommands, setQueueCommands] = useState('enqueue("A")\npeek()\ndequeue()'), [catalog, setCatalog] = useState<AlgorithmCatalogEntry[]>([]), [catalogError, setCatalogError] = useState(false)
+  const [input, setInput] = useState(SAMPLE_INPUT), [searchInput, setSearchInput] = useState('8, 3, 5, 1'), [treeInput, setTreeInput] = useState('8, 3, 10, 1, 6'), [treeOperation, setTreeOperation] = useState<TreeOperation['kind']>('PREORDER'), [lookupTarget, setLookupTarget] = useState('5'), [searchTarget, setSearchTarget] = useState('5'), [graphInput, setGraphInput] = useState('A'), [selectedStart, setSelectedStart] = useState('A'), [selectedDestination, setSelectedDestination] = useState(''), [knapsackItems, setKnapsackItems] = useState<any>([{ name: 'Map', weight: 1, value: 4 }, { name: 'Compass', weight: 2, value: 5 }]), [knapsackCapacity, setKnapsackCapacity] = useState('3'), [knapsackDraftChanged, setKnapsackDraftChanged] = useState(false), [structureDrafts, setStructureDrafts] = useState(initialStructureDrafts), [catalog, setCatalog] = useState<AlgorithmCatalogEntry[]>([]), [catalogError, setCatalogError] = useState(false)
   const [algorithmId, setAlgorithmId] = useState('insertion'), [trace, setTrace] = useState<VisualizerTrace | null>(null)
   const [step, setStep] = useState(-1), [playing, setPlaying] = useState(false), [speed, setSpeed] = useState(700), [requestState, setRequestState] = useState<RequestState>('empty'), [inputError, setInputError] = useState('')
   const abortRef = useRef<AbortController | null>(null), requestRef = useRef(0)
   const capability = useMemo(() => resolveAlgorithmAdapter(catalog.find(entry => entry.id === algorithmId)), [catalog, algorithmId])
-  const graphAdapter = capability && (capability.family === 'GRAPH_TRAVERSAL' || capability.family === 'PATHFINDING') ? capability.adapter : undefined, treeAdapter = capability?.family === 'TREE' ? capability.adapter : undefined, knapsackAdapter = capability?.family === 'DYNAMIC_PROGRAMMING' ? capability.adapter : undefined, structureAdapter = capability?.family === 'DATA_STRUCTURES' ? capability.adapter : undefined, isGraph = !!graphAdapter, isTree = !!treeAdapter, isSearch = capability?.family === 'SEARCH', isKnapsack = !!knapsackAdapter, isStructure = !!structureAdapter, isQueue = algorithmId === 'queue'
+  const graphAdapter = capability && (capability.family === 'GRAPH_TRAVERSAL' || capability.family === 'PATHFINDING') ? capability.adapter : undefined, treeAdapter = capability?.family === 'TREE' ? capability.adapter : undefined, knapsackAdapter = capability?.family === 'DYNAMIC_PROGRAMMING' ? capability.adapter : undefined, structureCapability = capability?.family === 'DATA_STRUCTURES' ? capability.adapter : undefined, isGraph = !!graphAdapter, isTree = !!treeAdapter, isSearch = capability?.family === 'SEARCH', isKnapsack = !!knapsackAdapter, isStructure = !!structureCapability
   const parsedGraph = useMemo(() => parseGraphInput(graphInput), [graphInput])
   const effectiveStart = parsedGraph?.nodes.includes(selectedStart) ? selectedStart : parsedGraph?.nodes[0] ?? ''
   const effectiveDestination = parsedGraph?.nodes.includes(selectedDestination) ? selectedDestination : ''
   const adapter = capability && (capability.family === 'SORTING' || capability.family === 'SEARCH') ? capability.adapter : adapters.insertion
-  const learningAdapter = graphAdapter ?? treeAdapter ?? knapsackAdapter ?? structureAdapter ?? adapter
+  const learningAdapter = graphAdapter ?? treeAdapter ?? knapsackAdapter ?? structureCapability?.learningAdapter ?? adapter
   const graphTrace: GraphAlgorithmTrace | null = trace && (trace.algorithm.family === 'GRAPH_TRAVERSAL' || trace.algorithm.family === 'PATHFINDING') ? trace as GraphAlgorithmTrace : null
   const sortingTrace: AlgorithmTrace | null = trace?.algorithm.family === 'SORTING' ? trace as AlgorithmTrace : null
   const searchTrace: SearchTrace | null = trace?.algorithm.family === 'SEARCH' ? trace as SearchTrace : null
   const treeTrace: TreeTrace | null = trace?.algorithm.family === 'TREE' ? trace as TreeTrace : null
   const knapsackTrace: DynamicProgrammingTrace | null = trace?.algorithm.family === 'DYNAMIC_PROGRAMMING' ? trace as DynamicProgrammingTrace : null
   const structureTrace: DataStructureTrace | null = trace?.algorithm.family === 'DATA_STRUCTURES' ? trace as DataStructureTrace : null
-  const structureOperations = isQueue ? queueOperations : stackOperations
-  const setStructureOperations = isQueue ? setQueueOperations : setStackOperations
-  const structureCommands = isQueue ? queueCommands : stackCommands
-  const setStructureCommands = isQueue ? setQueueCommands : setStackCommands
+  const structureDraft = structureCapability ? structureDrafts[structureCapability.id] : undefined
   const graphEvent = graphTrace && step >= 0 ? graphTrace.events[step] : undefined, sortingEvent = sortingTrace && step >= 0 ? sortingTrace.events[step] : undefined, searchEvent = searchTrace && step >= 0 ? searchTrace.events[step] : undefined, treeEvent = treeTrace && step >= 0 ? treeTrace.events[step] : undefined, knapsackEvent = knapsackTrace && step >= 0 ? knapsackTrace.events[step] : undefined, structureEvent = structureTrace && step >= 0 ? structureTrace.events[step] : undefined, event = graphEvent ?? sortingEvent ?? searchEvent ?? treeEvent ?? knapsackEvent ?? structureEvent, atStart = step < 0, atEnd = !trace || step >= trace.events.length - 1, completed = requestState === 'ready' && !!trace && atEnd
   const counts = useMemo(() => Object.fromEntries(adapter.metrics.map(metric => [metric, (sortingTrace?.events.slice(0, step + 1) ?? []).filter(e => e.type === metricEvent[metric]).length])), [adapter.metrics, step, sortingTrace])
   async function loadCatalog() { setCatalogError(false); try { const entries = await fetchAlgorithmCatalog(); const supported = entries.filter(e => resolveAlgorithmAdapter(e)); setCatalog(supported); const requested = new URLSearchParams(location.search).get('algorithm') ?? 'insertion'; const selected = supported.some(e => e.id === requested) ? requested : supported[0]?.id; if (selected) setAlgorithmId(selected) } catch { setCatalogError(true) } }
@@ -56,20 +57,34 @@ function App() {
   useEffect(() => { if (!playing || !trace || atEnd) return; const timer = setTimeout(() => setStep(s => nextStep(s, trace.events.length)), speed); return () => clearTimeout(timer) }, [playing, trace, atEnd, speed, step])
   function clearRun() { abortRef.current?.abort(); requestRef.current++; setTrace(null); setStep(-1); setPlaying(false); setRequestState('empty'); setInputError('') }
   function changeAlgorithm(id: string) {
-    const changingStructure = (algorithmId === 'stack' || algorithmId === 'queue') && (id === 'stack' || id === 'queue') && id !== algorithmId
-    if (changingStructure) {
-      const currentOperations = algorithmId === 'queue' ? queueOperations : stackOperations
-      const currentName = algorithmId === 'queue' ? 'Queue' : 'Stack', nextName = id === 'queue' ? 'Queue' : 'Stack'
-      if (currentOperations.length && !window.confirm(`Changing from ${currentName} to ${nextName} will discard this operation sequence. Continue?`)) return
-      setStackOperations([]); setQueueOperations([]); setStackCommands(''); setQueueCommands('')
+    const currentStructure = dataStructureCapabilities.find(capability => capability.id === algorithmId)
+    const nextStructure = dataStructureCapabilities.find(capability => capability.id === id)
+    if (currentStructure && nextStructure && currentStructure.id !== nextStructure.id) {
+      const currentDraft = structureDrafts[currentStructure.id]
+      if (currentDraft.operations.length && !window.confirm(`Changing from ${currentStructure.title} to ${nextStructure.title} will discard this operation sequence. Continue?`)) return
+      setStructureDrafts(drafts => ({
+        ...drafts,
+        [currentStructure.id]: { operations: [], commands: '' },
+      }))
     }
     clearRun(); setAlgorithmId(id); const url = new URL(location.href); url.searchParams.set('algorithm', id); history.replaceState(null, '', url)
   }
   function changeGraphInput(value: string) { const graph = parseGraphInput(value); setGraphInput(value); setSelectedStart(current => graph?.nodes.includes(current) ? current : graph?.nodes[0] ?? ''); setSelectedDestination(current => graph?.nodes.includes(current) ? current : '') }
   function applyGraphPreset(preset: GraphPreset) { clearRun(); setGraphInput(preset.input); setSelectedStart(preset.startNode); setSelectedDestination(preset.destination ?? '') }
   function applySearchPreset(preset: SearchPreset) { clearRun(); setSearchInput(preset.values.join(', ')); setSearchTarget(String(preset.target)) }
-  function replaceStructureOperations(operations: StructureOperation[]) { setStructureOperations(operations); setStructureCommands(serializeStructureCommands(operations)); setInputError('') }
-  function changeStructureCommands(value: string) { setStructureCommands(value); const parsed = parseStructureCommands(value, isQueue ? 'queue' : 'stack'); if ('errors' in parsed) { setInputError(parsed.errors.join(' ')); return } setStructureOperations(parsed.operations); setInputError('') }
+  function replaceStructureOperations(operations: StructureOperation[]) {
+    if (!structureCapability) return
+    setStructureDrafts(drafts => ({ ...drafts, [structureCapability.id]: { operations, commands: serializeStructureCommands(operations) } }))
+    setInputError('')
+  }
+  function changeStructureCommands(value: string) {
+    if (!structureCapability) return
+    setStructureDrafts(drafts => ({ ...drafts, [structureCapability.id]: { ...drafts[structureCapability.id], commands: value } }))
+    const parsed = parseStructureCommands(value, structureCapability)
+    if ('errors' in parsed) { setInputError(parsed.errors.join(' ')); return }
+    setStructureDrafts(drafts => ({ ...drafts, [structureCapability.id]: { operations: parsed.operations, commands: value } }))
+    setInputError('')
+  }
   async function visualizeKnapsack() {
     const items = Array.isArray(knapsackItems) ? knapsackItems : [], capacity = Number(knapsackCapacity)
     if (items.length < 1 || items.length > 10 || items.some(item => !item.name || !Number.isInteger(item.weight) || item.weight < 1 || !Number.isInteger(item.value) || item.value < 0) || !Number.isInteger(capacity) || capacity < 0 || capacity > 20) {
@@ -89,14 +104,15 @@ function App() {
     }
   }
   async function visualizeStructure() {
-    const operations = isQueue ? ['ENQUEUE', 'DEQUEUE', 'PEEK'] : ['PUSH', 'POP', 'PEEK'], valueOperation = isQueue ? 'ENQUEUE' : 'PUSH', title = isQueue ? 'Queue' : 'Stack'
-    if (structureOperations.length < 1 || structureOperations.length > 50 || structureOperations.some(operation => !operations.includes(operation.kind) || (operation.kind === valueOperation && (!operation.value?.trim() || operation.value.length > 40)))) {
-      setInputError(`Provide 1–50 valid ${title} operations; ${valueOperation.toLowerCase()} values must contain 1–40 characters.`)
+    if (!structureCapability || !structureDraft) return
+    const { operations } = structureDraft
+    if (operations.length < 1 || operations.length > 50 || operations.some(operation => !structureCapability.operations.includes(operation.kind) || (operation.kind === structureCapability.valueOperation && (!operation.value?.trim() || operation.value.length > 40)))) {
+      setInputError(`Provide 1–50 valid ${structureCapability.title} operations; ${structureCapability.commandNames[structureCapability.valueOperation]} values must contain 1–40 characters.`)
       return
     }
     abortRef.current?.abort(); const controller = new AbortController(), request = ++requestRef.current; abortRef.current = controller
     setRequestState('loading'); setInputError(''); setTrace(null); setStep(-1); setPlaying(false)
-    try { const result = await (isQueue ? createQueueTrace(structureOperations, controller.signal) : createStackTrace(structureOperations, controller.signal)); if (request === requestRef.current) { setTrace(result); setRequestState('ready') } } catch (error) {
+    try { const result = await structureCapability.createTrace(operations, controller.signal); if (request === requestRef.current) { setTrace(result); setRequestState('ready') } } catch (error) {
       if (controller.signal.aborted || request !== requestRef.current) return
       if (error instanceof TraceRequestError && error.kind === 'validation') { setInputError(error.message); setRequestState('empty') } else setRequestState('unavailable')
     }
@@ -120,13 +136,14 @@ function App() {
           ? `Lookup found ${treeTrace.result.target} after inspecting ${treeTrace.result.visitedValues.join(', ')}.`
           : `Lookup did not find ${treeTrace.result.target} after inspecting ${treeTrace.result.visitedValues.join(', ')}.`
         : `${treeTrace.result.kind.charAt(0) + treeTrace.result.kind.slice(1).toLowerCase()} traversal complete.` : 'Sorting complete.'
+  const StructureVisualizer = structureCapability?.Visualizer
   return <main><div className="sr-only" role="status" aria-live="polite">{requestState === 'loading' ? `Building ${learningAdapter.title} trace.` : catalogError ? 'The algorithm catalog is unavailable.' : completed ? completionAnnouncement : explanation}</div>
     <header className="masthead"><div className="eyebrow"><span />Algorithm Visualization Workbench</div><h1>See the logic.<br /><em>Step by step.</em></h1><p>{learningAdapter.intro}</p></header>
-    <section className="input-panel" aria-labelledby="input-title"><div><span className="section-number">01</span><h2 id="input-title">Choose and build</h2><p id="input-help">{isStructure ? isQueue ? 'Build a sequence of enqueue, dequeue, and peek operations. A queue starts empty.' : 'Build a sequence of push, pop, and peek operations. A stack starts empty.' : isKnapsack ? 'Enter 1–10 items as name, weight, value, one per line, then choose a capacity from 0–20.' : isGraph ? 'Enter standalone nodes or undirected edges, one per line. Add an optional weight from 1–99, for example A-B:7.' : isTree ? 'Enter 1–31 unique signed 32-bit whole numbers to form a binary search tree.' : isSearch ? 'Enter up to 50 whole numbers and a target value.' : 'Enter whole numbers separated by commas or spaces.'}</p></div><div><label htmlFor="algorithm-select">Algorithm</label><select id="algorithm-select" value={algorithmId} disabled={catalogError || !catalog.length} onChange={e => changeAlgorithm(e.target.value)}>{catalog.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
-      {isStructure && <div className="input-row structure-authoring"><fieldset><legend>{isQueue ? 'Queue' : 'Stack'} operations</legend>{structureOperations.map((operation, index) => <div key={index}><label htmlFor={`structure-operation-${index}`}>Operation {index + 1}</label><select id={`structure-operation-${index}`} value={operation.kind} onChange={e => replaceStructureOperations(structureOperations.map((item, itemIndex) => itemIndex === index ? { kind: e.target.value as StructureOperation['kind'], ...(e.target.value === (isQueue ? 'ENQUEUE' : 'PUSH') ? { value: item.value ?? '' } : {}) } : item))}>{isQueue ? <><option value="ENQUEUE">Enqueue</option><option value="DEQUEUE">Dequeue</option></> : <><option value="PUSH">Push</option><option value="POP">Pop</option></>}<option value="PEEK">Peek</option></select>{operation.kind === (isQueue ? 'ENQUEUE' : 'PUSH') && <input aria-label={`${isQueue ? 'Enqueue' : 'Push'} value ${index + 1}`} value={operation.value ?? ''} onChange={e => replaceStructureOperations(structureOperations.map((item, itemIndex) => itemIndex === index ? { ...item, value: e.target.value } : item))} />}</div>)}</fieldset><label htmlFor="structure-commands">Text commands</label><textarea id="structure-commands" value={structureCommands} onChange={e => changeStructureCommands(e.target.value)} aria-describedby="structure-commands-help" aria-invalid={!!inputError} /><p id="structure-commands-help">One command per line. Use {isQueue ? 'enqueue("label"), dequeue(), or peek().' : 'push("label"), pop(), or peek().'}</p><button onClick={() => structureOperations.length < 50 && replaceStructureOperations([...structureOperations, { kind: isQueue ? 'ENQUEUE' : 'PUSH', value: '' }])}>Add operation</button><button className="button button--run" onClick={() => void visualizeStructure()}>Visualize {isQueue ? 'Queue' : 'Stack'}</button></div>}
+    <section className="input-panel" aria-labelledby="input-title"><div><span className="section-number">01</span><h2 id="input-title">Choose and build</h2><p id="input-help">{isStructure ? `Build a sequence of ${structureCapability!.operations.map(operation => structureCapability!.commandNames[operation]).join(', ')} operations. A ${structureCapability!.title.toLowerCase()} starts empty.` : isKnapsack ? 'Enter 1–10 items as name, weight, value, one per line, then choose a capacity from 0–20.' : isGraph ? 'Enter standalone nodes or undirected edges, one per line. Add an optional weight from 1–99, for example A-B:7.' : isTree ? 'Enter 1–31 unique signed 32-bit whole numbers to form a binary search tree.' : isSearch ? 'Enter up to 50 whole numbers and a target value.' : 'Enter whole numbers separated by commas or spaces.'}</p></div><div><label htmlFor="algorithm-select">Algorithm</label><select id="algorithm-select" value={algorithmId} disabled={catalogError || !catalog.length} onChange={e => changeAlgorithm(e.target.value)}>{catalog.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
+      {isStructure && structureDraft && <StructureAuthoring capability={structureCapability!} operations={structureDraft.operations} commands={structureDraft.commands} inputError={inputError} onOperationsChange={replaceStructureOperations} onCommandsChange={changeStructureCommands} onRun={() => void visualizeStructure()} />}
       {catalogError ? <div className="state-panel unavailable-state" role="alert"><strong>Algorithms unavailable</strong><span>The executable algorithm catalog could not be loaded.</span><button className="button" onClick={() => void loadCatalog()}>Retry catalog</button></div> : isKnapsack ? <div className="input-row"><label htmlFor="knapsack-items">Items</label><textarea id="knapsack-items" value={knapsackItems} onChange={e => setKnapsackItems(e.target.value)} aria-describedby="input-help" aria-invalid={!!inputError} /><label htmlFor="knapsack-capacity">Capacity</label><input id="knapsack-capacity" inputMode="numeric" value={knapsackCapacity} onChange={e => setKnapsackCapacity(e.target.value)} /><button className="button button--run" disabled={requestState === 'loading'} onClick={() => void visualizeKnapsack()}>{requestState === 'loading' ? 'Building…' : 'Visualize Knapsack'}</button></div> : isTree ? <div className="input-row"><label className="sr-only" htmlFor="tree-input">BST insertion sequence</label><input id="tree-input" value={treeInput} aria-describedby="input-help" aria-invalid={!!inputError} onChange={e => setTreeInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && void visualize()} /><label htmlFor="tree-operation">Tree operation</label><select id="tree-operation" value={treeOperation} onChange={e => setTreeOperation(e.target.value as TreeOperation['kind'])}><option value="PREORDER">Preorder</option><option value="INORDER">Inorder</option><option value="POSTORDER">Postorder</option><option value="LOOKUP">Lookup</option></select>{treeOperation === 'LOOKUP' && <><label className="sr-only" htmlFor="lookup-target">Lookup target</label><input id="lookup-target" value={lookupTarget} aria-describedby="input-help" aria-invalid={!!inputError} onChange={e => setLookupTarget(e.target.value)} onKeyDown={e => e.key === 'Enter' && void visualize()} /></>}<button className="button button--run" disabled={requestState === 'loading'} onClick={() => void visualize()}>{requestState === 'loading' ? 'Building…' : `Visualize ${treeOperation.toLowerCase()}`}</button></div> : isSearch ? <div className="input-row"><label className="sr-only" htmlFor="search-input">Search values</label><input id="search-input" value={searchInput} aria-describedby="input-help" aria-invalid={!!inputError} onChange={e => setSearchInput(e.target.value)} /><label className="sr-only" htmlFor="search-target">Target</label><input id="search-target" value={searchTarget} aria-describedby="input-help" aria-invalid={!!inputError} onChange={e => setSearchTarget(e.target.value)} /><button className="button button--run" disabled={requestState === 'loading'} onClick={() => void visualize()}>{requestState === 'loading' ? 'Building…' : 'Visualize'}</button></div> : isGraph ? <div className="input-row"><label className="sr-only" htmlFor="graph-input">Graph input</label><textarea id="graph-input" value={graphInput} aria-describedby="input-help" aria-invalid={!!inputError} onChange={e => changeGraphInput(e.target.value)} /><button className="button button--run" disabled={requestState === 'loading'} onClick={() => void visualize()}>{requestState === 'loading' ? 'Building…' : 'Visualize'}</button></div> : <div className="input-row"><label className="sr-only" htmlFor="array-input">Array values</label><input id="array-input" value={input} aria-describedby="input-help" aria-invalid={!!inputError} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && void visualize()} /><button className="button button--run" disabled={requestState === 'loading'} onClick={() => void visualize()}>{requestState === 'loading' ? 'Building…' : 'Visualize'}</button></div>}
       {isKnapsack && <KnapsackAuthoring items={Array.isArray(knapsackItems) ? knapsackItems : []} capacity={knapsackCapacity} changed={knapsackDraftChanged} onItemsChange={items => { setKnapsackItems(items); setKnapsackDraftChanged(!!knapsackTrace) }} onCapacityChange={capacity => { setKnapsackCapacity(capacity); setKnapsackDraftChanged(!!knapsackTrace) }} onRun={() => void visualizeKnapsack()} />}
-      {structureTrace && (isQueue ? <QueueVisualizer state={structureEvent?.state} /> : <StackVisualizer state={structureEvent?.state} />)}
+      {structureTrace && StructureVisualizer && <StructureVisualizer state={structureEvent?.state} />}
       {isSearch && <div className="presets" aria-label="Preset searches">{searchPresets.map(p => <button key={p.label} title={p.description} onClick={() => applySearchPreset(p)}>{p.label}</button>)}</div>}
       {isGraph && <><div className="presets" aria-label="Preset graphs">{graphAdapter!.presets.map(p => <button key={p.label} title={p.description} onClick={() => applyGraphPreset(p)}>{p.label}</button>)}</div><div className="start-node"><label htmlFor="start-node">Start node</label><select id="start-node" value={effectiveStart} onChange={e => setSelectedStart(e.target.value)} disabled={!parsedGraph}>{parsedGraph?.nodes.map(node => <option key={node}>{node}</option>)}</select></div>{graphAdapter!.destination !== 'NONE' && <div className="start-node"><label htmlFor="destination-node">Destination</label><select id="destination-node" value={effectiveDestination} onChange={e => setSelectedDestination(e.target.value)} disabled={!parsedGraph}><option value="">{graphAdapter!.destination === 'REQUIRED' ? 'Select destination' : 'No destination'}</option>{parsedGraph?.nodes.map(node => <option key={node}>{node}</option>)}</select></div>}</>}
       {inputError && <p className="error" role="alert">{inputError}</p>}</section>

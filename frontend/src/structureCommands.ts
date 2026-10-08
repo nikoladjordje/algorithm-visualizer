@@ -1,30 +1,20 @@
 import type { StructureOperation } from './types'
-
-type StructureId = 'stack' | 'queue'
+import type { DataStructureCapability } from './dataStructureCapabilities'
 
 export type StructureCommandParseResult =
   | { operations: StructureOperation[] }
   | { errors: string[] }
 
-const commandsByStructure = {
-  stack: ['push', 'pop', 'peek'],
-  queue: ['enqueue', 'dequeue', 'peek'],
-} as const
-
 function error(line: number, message: string) {
   return `Line ${line}: ${message}`
 }
 
-function operationKind(command: string): StructureOperation['kind'] {
-  return command.toUpperCase() as StructureOperation['kind']
-}
-
-function availableCommands(structure: StructureId) {
-  const commands = commandsByStructure[structure]
+function availableCommands(capability: DataStructureCapability) {
+  const commands = capability.operations.map(operation => capability.commandNames[operation])
   return `${commands.slice(0, -1).join(', ')}, or ${commands.at(-1)}`
 }
 
-export function parseStructureCommands(source: string, structure: StructureId): StructureCommandParseResult {
+export function parseStructureCommands(source: string, capability: DataStructureCapability): StructureCommandParseResult {
   const operations: StructureOperation[] = []
   const errors: string[] = []
 
@@ -32,17 +22,18 @@ export function parseStructureCommands(source: string, structure: StructureId): 
     if (!line.trim()) return
     const match = line.match(/^\s*([a-z]+)\s*\((.*)\)\s*$/)
     if (!match) {
-      errors.push(error(index + 1, `Use a function-style command such as ${structure === 'queue' ? 'enqueue("A") or dequeue()' : 'push("A") or pop()'}.`))
+      errors.push(error(index + 1, `Use a function-style command such as ${capability.commandNames[capability.valueOperation]}("A") or ${capability.commandNames[capability.operations.find(operation => operation !== capability.valueOperation)!]}().`))
       return
     }
 
     const [, command, argument] = match
-    if (!commandsByStructure[structure].includes(command as never)) {
-      errors.push(error(index + 1, `${command} is not available for ${structure === 'queue' ? 'Queue' : 'Stack'}. Use ${availableCommands(structure)}.`))
+    const operation = capability.operations.find(kind => capability.commandNames[kind] === command)
+    if (!operation) {
+      errors.push(error(index + 1, `${command} is not available for ${capability.title}. Use ${availableCommands(capability)}.`))
       return
     }
 
-    const takesLabel = command === 'push' || command === 'enqueue'
+    const takesLabel = operation === capability.valueOperation
     if (!takesLabel && argument.trim()) {
       errors.push(error(index + 1, `${command} does not accept a label.`))
       return
@@ -52,7 +43,7 @@ export function parseStructureCommands(source: string, structure: StructureId): 
       return
     }
     if (!takesLabel) {
-      operations.push({ kind: operationKind(command) })
+      operations.push({ kind: operation })
       return
     }
 
@@ -63,7 +54,7 @@ export function parseStructureCommands(source: string, structure: StructureId): 
         errors.push(error(index + 1, 'Labels must contain 1–40 characters.'))
         return
       }
-      operations.push({ kind: operationKind(command), value })
+      operations.push({ kind: operation, value })
     } catch {
       errors.push(error(index + 1, `${command} requires one quoted label.`))
     }

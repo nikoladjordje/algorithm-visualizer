@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { getDataStructureCapability } from './dataStructureCapabilities'
 import { parseStructureCommands, serializeStructureCommands } from './structureCommands'
 
 describe('structure commands', () => {
   it('parses Stack commands and standard escaped labels', () => {
-    expect(parseStructureCommands('push("A\\nB")\npeek()\npop()', 'stack')).toEqual({
+    expect(parseStructureCommands('push("A\\nB")\npeek()\npop()', getDataStructureCapability('stack'))).toEqual({
       operations: [{ kind: 'PUSH', value: 'A\nB' }, { kind: 'PEEK' }, { kind: 'POP' }],
     })
   })
@@ -19,11 +20,11 @@ describe('structure commands', () => {
     ['stack', 'pop("A")', 'Line 1: pop does not accept a label.'],
     ['stack', 'push("' + 'A'.repeat(41) + '")', 'Line 1: Labels must contain 1–40 characters.'],
   ])('reports an actionable error for %s', (structure, source, message) => {
-    expect(parseStructureCommands(source, structure as 'stack' | 'queue')).toEqual({ errors: [message] })
+    expect(parseStructureCommands(source, getDataStructureCapability(structure as 'stack' | 'queue'))).toEqual({ errors: [message] })
   })
 
   it('reports the command line that prevents replacing the canonical sequence', () => {
-    expect(parseStructureCommands('enqueue("A")\nwat()', 'queue')).toEqual({
+    expect(parseStructureCommands('enqueue("A")\nwat()', getDataStructureCapability('queue'))).toEqual({
       errors: ['Line 2: wat is not available for Queue. Use enqueue, dequeue, or peek.'],
     })
   })
