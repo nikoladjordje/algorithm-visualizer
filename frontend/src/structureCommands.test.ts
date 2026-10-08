@@ -13,6 +13,12 @@ describe('structure commands', () => {
     expect(serializeStructureCommands([{ kind: 'ENQUEUE', value: 'A"B' }, { kind: 'DEQUEUE' }, { kind: 'PEEK' }])).toBe('enqueue("A\\"B")\ndequeue()\npeek()')
   })
 
+  it('parses a linked-list prepend with JSON-style label escaping', () => {
+    expect(parseStructureCommands('prepend("A\\"B")', getDataStructureCapability('linked-list'))).toEqual({
+      operations: [{ kind: 'PREPEND', value: 'A"B' }],
+    })
+  })
+
   it.each([
     ['stack', 'push()', 'Line 1: push requires one quoted label.'],
     ['queue', 'push("A")', 'Line 1: push is not available for Queue. Use enqueue, dequeue, or peek.'],

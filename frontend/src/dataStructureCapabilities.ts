@@ -1,24 +1,26 @@
 import type { StructureOperation } from './types'
-import { createQueueTrace, createStackTrace } from './api'
+import { createLinkedListTrace, createQueueTrace, createStackTrace } from './api'
+import { LinkedListVisualizer } from './components/LinkedListVisualizer'
 import { QueueVisualizer } from './components/QueueVisualizer'
 import { StackVisualizer } from './components/StackVisualizer'
 import { queueAdapter } from './queueAdapter'
 import { stackAdapter } from './stackAdapter'
-import type { DataStructureTrace } from './types'
+import { linkedListAdapter } from './linkedListAdapter'
+import type { StructureTrace } from './types'
 
-export type DataStructureId = 'stack' | 'queue'
+export type DataStructureId = 'stack' | 'queue' | 'linked-list'
 export type DataStructureOperation = StructureOperation['kind']
-const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek' }
+const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend' }
 
 export interface DataStructureCapability {
   id: DataStructureId
-  title: 'Stack' | 'Queue'
+  title: 'Stack' | 'Queue' | 'Linked List'
   operations: DataStructureOperation[]
   valueOperation: DataStructureOperation
   commandNames: Record<DataStructureOperation, string>
-  createTrace: (operations: StructureOperation[], signal?: AbortSignal) => Promise<DataStructureTrace>
-  Visualizer: typeof StackVisualizer | typeof QueueVisualizer
-  learningAdapter: typeof stackAdapter | typeof queueAdapter
+  createTrace: (operations: StructureOperation[], signal?: AbortSignal) => Promise<StructureTrace>
+  Visualizer: typeof StackVisualizer | typeof QueueVisualizer | typeof LinkedListVisualizer
+  learningAdapter: typeof stackAdapter | typeof queueAdapter | typeof linkedListAdapter
 }
 
 export const dataStructureCapabilities: DataStructureCapability[] = [
@@ -41,6 +43,16 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
     createTrace: createQueueTrace,
     Visualizer: QueueVisualizer,
     learningAdapter: queueAdapter,
+  },
+  {
+    id: 'linked-list',
+    title: 'Linked List',
+    operations: ['PREPEND'],
+    valueOperation: 'PREPEND',
+    commandNames,
+    createTrace: (operations, signal) => createLinkedListTrace(operations as Array<{ kind: 'PREPEND'; value: string }>, signal),
+    Visualizer: LinkedListVisualizer,
+    learningAdapter: linkedListAdapter,
   },
 ]
 

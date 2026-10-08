@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureTrace, DepthFirstSearchTrace, DynamicProgrammingTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, KnapsackItem, PathfindingTrace, ProblemDetail, SearchTrace, StructureOperation, TreeOperation, TreeTrace } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureTrace, DepthFirstSearchTrace, DynamicProgrammingTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, KnapsackItem, LinkedListTrace, PathfindingTrace, ProblemDetail, SearchTrace, StructureOperation, StructureTrace, TreeOperation, TreeTrace } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -73,6 +73,9 @@ export async function createStackTrace(operations: StructureOperation[], signal?
 export async function createQueueTrace(operations: StructureOperation[], signal?: AbortSignal): Promise<DataStructureTrace> {
   return requestTrace('/api/v2/algorithms/queue/trace', { kind: 'DATA_STRUCTURES', operations }, signal) as Promise<DataStructureTrace>
 }
+export async function createLinkedListTrace(operations: Array<{ kind: 'PREPEND'; value: string }>, signal?: AbortSignal): Promise<LinkedListTrace> {
+  return requestTrace('/api/v2/algorithms/linked-list/trace', { kind: 'LINKED_LIST', operations }, signal) as Promise<LinkedListTrace>
+}
 
 export async function createGraphTraversalTrace(
   graph: { nodes: string[]; edges: GraphEdge[]; startNode: string; destination?: string },
@@ -101,7 +104,7 @@ export async function createDijkstraTrace(
   }, signal) as Promise<PathfindingTrace>
 }
 
-async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace | DynamicProgrammingTrace | DataStructureTrace> {
+async function requestTrace(url: string, body: unknown, signal?: AbortSignal): Promise<AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace | DynamicProgrammingTrace | StructureTrace> {
   let response: Response
   try {
     response = await fetch(url, {
@@ -114,7 +117,7 @@ async function requestTrace(url: string, body: unknown, signal?: AbortSignal): P
   if (response.ok) {
     const trace = await response.json() as { apiVersion?: string }
     if (trace.apiVersion !== '2.0') throw new TraceRequestError(`Unsupported trace API version: ${trace.apiVersion ?? 'missing'}.`, 'unavailable')
-    return trace as AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace | DynamicProgrammingTrace | DataStructureTrace
+    return trace as AlgorithmTrace | GraphAlgorithmTrace | SearchTrace | TreeTrace | DynamicProgrammingTrace | StructureTrace
   }
   const problem = await readProblem(response)
   if (response.status >= 400 && response.status < 500) throw new TraceRequestError(problem?.detail ?? 'Check the input and try again.', 'validation', problem)

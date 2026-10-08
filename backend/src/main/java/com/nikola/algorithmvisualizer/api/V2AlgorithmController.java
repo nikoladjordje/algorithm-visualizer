@@ -16,6 +16,7 @@ import com.nikola.algorithmvisualizer.algorithm.AlgorithmRegistry;
 import com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.StackAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.QueueAlgorithm;
+import com.nikola.algorithmvisualizer.datastructures.LinkedListAlgorithm;
 import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
@@ -61,12 +62,13 @@ public class V2AlgorithmController {
     private final KnapsackAlgorithm knapsack;
     private final StackAlgorithm stack;
     private final QueueAlgorithm queue;
+    private final LinkedListAlgorithm linkedList;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
             DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch,
             BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree, KnapsackAlgorithm knapsack,
-            StackAlgorithm stack, QueueAlgorithm queue) {
+            StackAlgorithm stack, QueueAlgorithm queue, LinkedListAlgorithm linkedList) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
@@ -77,6 +79,7 @@ public class V2AlgorithmController {
         this.knapsack = knapsack;
         this.stack = stack;
         this.queue = queue;
+        this.linkedList = linkedList;
     }
 
     @GetMapping
@@ -109,6 +112,9 @@ public class V2AlgorithmController {
         catalog.add(new V2Contracts.CatalogEntry("queue", "Queue", DATA_STRUCTURES, "2.0",
                 new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
                         List.of("ENQUEUE", "DEQUEUE", "PEEK"))));
+        catalog.add(new V2Contracts.CatalogEntry("linked-list", "Linked List", DATA_STRUCTURES, "2.0",
+                new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
+                        List.of("PREPEND"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
                 new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
@@ -286,6 +292,23 @@ public class V2AlgorithmController {
                 trace.events().stream().map(V2AlgorithmController::toV2Event).toList());
     }
 
+    @PostMapping("/linked-list/trace")
+    @ResponseStatus(HttpStatus.OK)
+    Object linkedListTrace(@RequestBody V2Contracts.LinkedListRequest request) {
+        if (request == null || !"LINKED_LIST".equals(request.kind())) {
+            throw new AlgorithmFamilyMismatchException("linked-list", "LINKED_LIST");
+        }
+        validateLinkedList(request);
+        var operations = request.operations().stream()
+                .map(operation -> new LinkedListAlgorithm.Operation(operation.kind(), operation.value())).toList();
+        var trace = linkedList.execute(operations);
+        if (trace.events().size() > MAXIMUM_EVENTS) throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+        return new V2Contracts.LinkedListTrace("2.0",
+                new V2Contracts.AlgorithmInfo("linked-list", "Linked List", DATA_STRUCTURES),
+                new V2Contracts.LinkedListInput("LINKED_LIST", request.operations()), trace.result(),
+                new V2Contracts.Limits(MAXIMUM_EVENTS), trace.events());
+    }
+
     private static void validateGraph(V2Request request) {
         if (request.nodes() == null || request.nodes().isEmpty() || request.nodes().size() > 12) {
             throw new GraphValidationException("nodes", "Provide between 1 and 12 nodes");
@@ -390,6 +413,22 @@ public class V2AlgorithmController {
             }
             if (!valueOperation.equals(operation.kind()) && operation.value() != null) {
                 throw new GraphValidationException(field + ".value", "Only " + valueOperation + " accepts a structure value");
+            }
+        }
+    }
+
+    private static void validateLinkedList(V2Contracts.LinkedListRequest request) {
+        if (request.operations() == null || request.operations().isEmpty() || request.operations().size() > 50) {
+            throw new GraphValidationException("operations", "Provide from 1 through 50 linked list operations");
+        }
+        for (int index = 0; index < request.operations().size(); index++) {
+            var operation = request.operations().get(index);
+            String field = "operations[" + index + "]";
+            if (operation == null || !"PREPEND".equals(operation.kind())) {
+                throw new GraphValidationException(field + ".kind", "Use PREPEND");
+            }
+            if (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40) {
+                throw new GraphValidationException(field + ".value", "linked list values must contain 1 through 40 characters");
             }
         }
     }

@@ -92,6 +92,18 @@ final class V2Contracts {
             Object result, Limits limits, List<?> events) {
         DataStructureTrace { events = List.copyOf(events); }
     }
+    record LinkedListOperation(String kind, String value) { }
+    record LinkedListRequest(String kind, List<LinkedListOperation> operations) {
+        LinkedListRequest { operations = operations == null ? null : List.copyOf(operations); }
+    }
+    record LinkedListInput(String kind, List<LinkedListOperation> operations) {
+        LinkedListInput { operations = List.copyOf(operations); }
+    }
+    record LinkedListTrace(String apiVersion, AlgorithmInfo algorithm, LinkedListInput input,
+            com.nikola.algorithmvisualizer.datastructures.LinkedListAlgorithm.Result result, Limits limits,
+            List<com.nikola.algorithmvisualizer.datastructures.LinkedListAlgorithm.Event> events) {
+        LinkedListTrace { events = List.copyOf(events); }
+    }
 
     record Limits(int maximumEvents) {
     }

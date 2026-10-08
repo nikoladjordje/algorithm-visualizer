@@ -26,7 +26,7 @@ export function resolveAlgorithmAdapter(entry?: AlgorithmCatalogEntry): Algorith
   if (entry.family === 'SEARCH' && entry.id === 'binary-search') return { family: 'SEARCH', adapter: binarySearchAdapter }
   if (entry.family === 'TREE' && entry.id === 'binary-search-tree') return { family: 'TREE', adapter: treeAdapter }
   if (entry.family === 'DYNAMIC_PROGRAMMING' && entry.id === 'zero-one-knapsack') return { family: 'DYNAMIC_PROGRAMMING', adapter: knapsackAdapter }
-  if (entry.family === 'DATA_STRUCTURES' && (entry.id === 'stack' || entry.id === 'queue')) return { family: 'DATA_STRUCTURES', adapter: getDataStructureCapability(entry.id) }
+  if (entry.family === 'DATA_STRUCTURES' && (entry.id === 'stack' || entry.id === 'queue' || entry.id === 'linked-list')) return { family: 'DATA_STRUCTURES', adapter: getDataStructureCapability(entry.id) }
   const adapter = graphAdapters.get(entry.id)
   if (adapter && entry.family === adapter.family && entry.contractVersion === adapter.contractVersion) {
     return { family: adapter.family, adapter }
