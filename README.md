@@ -141,12 +141,29 @@ excluding an item yield the same value, it deterministically excludes that item.
 | Pathfinding | Available | Dijkstra minimum-cost paths with tentative distances and relaxation steps. |
 | Trees | Available | Unbalanced binary search tree construction, lookup, preorder, inorder, and postorder traversal. |
 | Dynamic programming | Available | 0/1 Knapsack with authored items, bottom-up table updates, and reconstructed solutions. |
-| Data structures | Proposed | Visualize stack, queue, and linked-list operations with their changing state. |
+| Data structures | Proposed | One major epic delivered through small, independently shippable milestones: stack and queue foundations, linked lists, deques, heaps and priority queues, hash tables, tree structures, then specialized structures. |
 | Backtracking | Proposed | Explore choices, dead ends, and undo steps through a maze solver or N-Queens. |
 | Recursion and divide-and-conquer | Proposed | Expose call structure and recursive decomposition in algorithms such as merge sort and binary search. |
 | Directed graph algorithms | Proposed | Add directed graph authoring with topological sorting and cycle detection. |
 | Minimum spanning trees | Proposed | Use weighted graphs to teach Prim's or Kruskal's minimum-total-cost connectivity. |
 | String matching | Proposed | Compare naive matching with KMP's prefix-table-guided skips. |
+
+The first Data Structures delivery will cover stack and queue foundations together: stack push,
+pop, and peek; queue enqueue, dequeue, and peek; plus explanatory empty-structure outcomes. A
+learner will author an operation sequence from an empty structure and replay the resulting
+stateful session. Values are short text labels so the lesson remains focused on access order. It
+will provide both a structured operation editor and a text command language, and remain a small,
+independently shippable milestone within the larger Data Structures epic. The two authoring
+surfaces will stay synchronized as views of the same operation sequence.
+Each sequence will select either Stack or Queue, never mix both structures.
+The text form uses one function-style command with quoted labels per line, such as `push("A")` or
+`enqueue("Task 1")`. Sequences contain 1–50 operations, labels contain 1–40 characters, and
+malformed text receives immediate line-specific feedback while retaining the last valid sequence.
+Playback shows semantic steps for each operation. Stacks use a fixed vertical layout at the top;
+queues use a fixed horizontal layout from front to rear.
+An empty read or removal is a no-op and the sequence continues. Repeated labels are valid, distinct
+inserted occurrences; equal labels receive stable badges only when duplicates coexist. Changing
+between Stack and Queue starts a new empty sequence after confirmation when there is a draft.
 
 Direct visual graph editing and directed graphs are not currently supported. Proposed families
 describe the intended direction and may change as the interaction and trace contracts evolve. Tree
