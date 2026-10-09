@@ -13,13 +13,13 @@ interface StructureAuthoringProps {
 }
 
 function operationLabel(kind: StructureOperation['kind']) {
-  return `${kind.charAt(0)}${kind.slice(1).toLowerCase()}`
+  return kind.split('_').map(word => `${word.charAt(0)}${word.slice(1).toLowerCase()}`).join(' ')
 }
 
 export function StructureAuthoring({ capability, operations, commands, inputError, onOperationsChange, onCommandsChange, onRun }: StructureAuthoringProps) {
   function replaceOperations(nextOperations: StructureOperation[]) {
     onOperationsChange(nextOperations)
-    onCommandsChange(serializeStructureCommands(nextOperations))
+    onCommandsChange(serializeStructureCommands(nextOperations, capability))
   }
 
   function changeOperation(index: number, kind: StructureOperation['kind']) {

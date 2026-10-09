@@ -56,4 +56,13 @@ describe('structure visualizers', () => {
     expect(screen.getByLabelText('Linked list: A, node 1, next node 2; A, node 2, next null. Inspecting node 1. Matched node 1.')).toBeInTheDocument()
     expect(screen.getByText('Matched node 1')).toBeInTheDocument()
   })
+
+  it('narrates a detached former head before removal from the live topology', () => {
+    render(<LinkedListVisualizer state={{ kind: 'LINKED_LIST', headOccurrenceId: 2, activeOperationIndex: 2,
+      allocatedOccurrenceId: null, inspectedOccurrenceId: null, linkedOccurrenceId: null, detachedOccurrenceId: 1,
+      nodes: [{ occurrenceId: 1, value: 'A', nextOccurrenceId: null }, { occurrenceId: 2, value: 'B', nextOccurrenceId: null }] }} />)
+
+    expect(screen.getByLabelText('Linked list: B, node 2, next null; detached from live topology: A, node 1, next null. Detached node 1 has next null.')).toBeInTheDocument()
+    expect(screen.getByText('Detached node 1; next null')).toBeInTheDocument()
+  })
 })

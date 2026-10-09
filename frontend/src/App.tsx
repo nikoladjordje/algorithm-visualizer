@@ -77,7 +77,7 @@ function App() {
   function applySearchPreset(preset: SearchPreset) { clearRun(); setSearchInput(preset.values.join(', ')); setSearchTarget(String(preset.target)) }
   function replaceStructureOperations(operations: StructureOperation[]) {
     if (!structureCapability) return
-    setStructureDrafts(drafts => ({ ...drafts, [structureCapability.id]: { operations, commands: serializeStructureCommands(operations) } }))
+    setStructureDrafts(drafts => ({ ...drafts, [structureCapability.id]: { operations, commands: serializeStructureCommands(operations, structureCapability) } }))
     setInputError('')
   }
   function changeStructureCommands(value: string) {

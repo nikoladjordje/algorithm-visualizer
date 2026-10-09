@@ -43,7 +43,8 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$[14].id").value("linked-list"))
                 .andExpect(jsonPath("$[14].constraints.operations[0]").value("PREPEND"))
                 .andExpect(jsonPath("$[14].constraints.operations[1]").value("APPEND"))
-                .andExpect(jsonPath("$[14].constraints.operations[2]").value("FIND"));
+                .andExpect(jsonPath("$[14].constraints.operations[2]").value("REMOVE_FIRST"))
+                .andExpect(jsonPath("$[14].constraints.operations[3]").value("FIND"));
 
         mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -85,11 +86,24 @@ class AlgorithmControllerTests {
 
         mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"LINKED_LIST\",\"operations\":[{\"kind\":\"PREPEND\",\"value\":\"A\"},{\"kind\":\"APPEND\",\"value\":\"B\"},{\"kind\":\"REMOVE_FIRST\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events[6].type").value("HEAD_SELECTED"))
+                .andExpect(jsonPath("$.events[7].state.headOccurrenceId").value(2))
+                .andExpect(jsonPath("$.events[8].state.detachedOccurrenceId").value(1))
+                .andExpect(jsonPath("$.events[9].state.nodes.length()").value(1));
+
+        mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"kind\":\"LINKED_LIST\",\"operations\":[]}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("operations"));
         mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"kind\":\"LINKED_LIST\",\"operations\":[{\"kind\":\"PREPEND\",\"value\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}]}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("operations[0].value"));
+        mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"LINKED_LIST\",\"operations\":[{\"kind\":\"REMOVE_FIRST\",\"value\":\"A\"}]}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("operations[0].value"));
     }
 

@@ -114,7 +114,7 @@ public class V2AlgorithmController {
                         List.of("ENQUEUE", "DEQUEUE", "PEEK"))));
         catalog.add(new V2Contracts.CatalogEntry("linked-list", "Linked List", DATA_STRUCTURES, "2.0",
                 new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
-                        List.of("PREPEND", "APPEND", "FIND"))));
+                        List.of("PREPEND", "APPEND", "REMOVE_FIRST", "FIND"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
                 new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
@@ -425,10 +425,14 @@ public class V2AlgorithmController {
             var operation = request.operations().get(index);
             String field = "operations[" + index + "]";
             if (operation == null || (!"PREPEND".equals(operation.kind()) && !"APPEND".equals(operation.kind())
-                    && !"FIND".equals(operation.kind()))) {
-                throw new GraphValidationException(field + ".kind", "Use PREPEND, APPEND, or FIND");
+                    && !"REMOVE_FIRST".equals(operation.kind()) && !"FIND".equals(operation.kind()))) {
+                throw new GraphValidationException(field + ".kind", "Use PREPEND, APPEND, REMOVE_FIRST, or FIND");
             }
-            if (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40) {
+            if ("REMOVE_FIRST".equals(operation.kind()) && operation.value() != null) {
+                throw new GraphValidationException(field + ".value", "REMOVE_FIRST does not accept a linked list value");
+            }
+            if (!"REMOVE_FIRST".equals(operation.kind())
+                    && (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40)) {
                 throw new GraphValidationException(field + ".value", "linked list values must contain 1 through 40 characters");
             }
         }

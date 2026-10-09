@@ -10,7 +10,7 @@ describe('structure commands', () => {
   })
 
   it('serializes canonical Queue operations as editable commands', () => {
-    expect(serializeStructureCommands([{ kind: 'ENQUEUE', value: 'A"B' }, { kind: 'DEQUEUE' }, { kind: 'PEEK' }])).toBe('enqueue("A\\"B")\ndequeue()\npeek()')
+    expect(serializeStructureCommands([{ kind: 'ENQUEUE', value: 'A"B' }, { kind: 'DEQUEUE' }, { kind: 'PEEK' }], getDataStructureCapability('queue'))).toBe('enqueue("A\\"B")\ndequeue()\npeek()')
   })
 
   it('parses a linked-list prepend with JSON-style label escaping', () => {
@@ -29,6 +29,16 @@ describe('structure commands', () => {
     expect(parseStructureCommands('find("A\\"B")', getDataStructureCapability('linked-list'))).toEqual({
       operations: [{ kind: 'FIND', value: 'A"B' }],
     })
+  })
+
+  it('parses linked-list head removal without a label', () => {
+    expect(parseStructureCommands('removeFirst()', getDataStructureCapability('linked-list'))).toEqual({
+      operations: [{ kind: 'REMOVE_FIRST' }],
+    })
+  })
+
+  it('serializes linked-list head removal using its camel-cased command name', () => {
+    expect(serializeStructureCommands([{ kind: 'REMOVE_FIRST' }], getDataStructureCapability('linked-list'))).toBe('removeFirst()')
   })
 
   it.each([

@@ -16,8 +16,8 @@ describe('data structure capabilities', () => {
     })
     expect(getDataStructureCapability('linked-list')).toMatchObject({
       valueOperations: ['PREPEND', 'APPEND', 'FIND'],
-      operations: ['PREPEND', 'APPEND', 'FIND'],
-      commandNames: { PREPEND: 'prepend', APPEND: 'append', FIND: 'find' },
+      operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'FIND'],
+      commandNames: { PREPEND: 'prepend', APPEND: 'append', REMOVE_FIRST: 'removeFirst', FIND: 'find' },
     })
   })
 })

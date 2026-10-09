@@ -89,4 +89,47 @@ class LinkedListAlgorithmTests {
         assertEquals(List.of("Not found: A", "B", "Not found: A"), trace.result().outcomes());
         assertEquals(1L, trace.result().headOccurrenceId());
     }
+
+    @Test
+    void tracesHeadSelectionMovementDetachmentAndRemovalWithoutLosingSuccessorIdentity() {
+        var trace = new LinkedListAlgorithm().execute(List.of(
+                new LinkedListAlgorithm.Operation("PREPEND", "A"),
+                new LinkedListAlgorithm.Operation("APPEND", "B"),
+                new LinkedListAlgorithm.Operation("REMOVE_FIRST", null)));
+
+        assertEquals(List.of("HEAD_SELECTED", "HEAD_MOVED", "NODE_DETACHED", "NODE_REMOVED"),
+                trace.events().subList(6, 10).stream().map(LinkedListAlgorithm.Event::type).toList());
+        assertEquals(1L, trace.events().get(6).state().headOccurrenceId());
+        assertEquals(2L, trace.events().get(7).state().headOccurrenceId());
+        assertEquals(2L, trace.events().get(7).data().occurrenceId());
+        assertEquals(1L, trace.events().get(8).state().detachedOccurrenceId());
+        assertEquals(null, trace.events().get(8).state().nodes().getFirst().nextOccurrenceId());
+        assertEquals(List.of(2L), trace.events().get(9).state().nodes().stream()
+                .map(LinkedListAlgorithm.Node::occurrenceId).toList());
+        assertEquals(List.of("A", "B", "Removed A from node 1"), trace.result().outcomes());
+    }
+
+    @Test
+    void makesEmptyRemovalAVisibleNoOpAndContinuesTheSequence() {
+        var trace = new LinkedListAlgorithm().execute(List.of(
+                new LinkedListAlgorithm.Operation("REMOVE_FIRST", null),
+                new LinkedListAlgorithm.Operation("PREPEND", "B")));
+
+        assertEquals(List.of("EMPTY_STRUCTURE", "NODE_ALLOCATED", "NEXT_INITIALIZED", "HEAD_MOVED"),
+                trace.events().stream().map(LinkedListAlgorithm.Event::type).toList());
+        assertEquals(List.of("Nothing to remove: the list is empty", "B"), trace.result().outcomes());
+        assertEquals(1L, trace.result().headOccurrenceId());
+    }
+
+    @Test
+    void preservesTheSecondDuplicateWhenRemovingTheFirstDuplicate() {
+        var trace = new LinkedListAlgorithm().execute(List.of(
+                new LinkedListAlgorithm.Operation("PREPEND", "A"),
+                new LinkedListAlgorithm.Operation("APPEND", "A"),
+                new LinkedListAlgorithm.Operation("REMOVE_FIRST", null)));
+
+        assertEquals(1L, trace.events().get(8).state().detachedOccurrenceId());
+        assertEquals(List.of(2L), trace.result().nodes().stream().map(LinkedListAlgorithm.Node::occurrenceId).toList());
+        assertEquals("A", trace.result().nodes().getFirst().value());
+    }
 }

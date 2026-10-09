@@ -11,7 +11,7 @@ public class LinkedListAlgorithm {
     public record Node(long occurrenceId, String value, Long nextOccurrenceId) { }
     public record State(String kind, List<Node> nodes, Long headOccurrenceId, int activeOperationIndex,
             Long allocatedOccurrenceId, Long inspectedOccurrenceId, Long linkedOccurrenceId,
-            Long matchedOccurrenceId) {
+            Long matchedOccurrenceId, Long detachedOccurrenceId) {
         public State { nodes = List.copyOf(nodes); }
     }
     public record EventData(String kind, String value, Long occurrenceId, Long nextOccurrenceId) { }
@@ -51,6 +51,35 @@ public class LinkedListAlgorithm {
                             operationIndex, null, null, null, null, null, operation.value(), null));
                     outcomes.add("Not found: " + operation.value());
                 }
+                continue;
+            }
+            if ("REMOVE_FIRST".equals(operation.kind())) {
+                if (head == null) {
+                    events.add(event(sequence++, "EMPTY_STRUCTURE", "linked-list-empty-removal", nodes, head,
+                            operationIndex, null, null, null, null, null, "", null));
+                    outcomes.add("Nothing to remove: the list is empty");
+                    continue;
+                }
+                Node formerHead = find(nodes, head);
+                long formerHeadId = formerHead.occurrenceId();
+                events.add(event(sequence++, "HEAD_SELECTED", "linked-list-select-head", nodes, head,
+                        operationIndex, null, formerHeadId, null, null, formerHeadId, formerHead.value(),
+                        formerHead.nextOccurrenceId()));
+
+                head = formerHead.nextOccurrenceId();
+                Node successor = head == null ? null : find(nodes, head);
+                events.add(event(sequence++, "HEAD_MOVED", "linked-list-advance-head", nodes, head,
+                        operationIndex, null, null, null, null, head, successor == null ? "" : successor.value(),
+                        successor == null ? null : successor.nextOccurrenceId()));
+
+                replace(nodes, formerHeadId, new Node(formerHeadId, formerHead.value(), null));
+                events.add(detachedEvent(sequence++, "NODE_DETACHED", "linked-list-detach-head", nodes, head,
+                        operationIndex, formerHeadId, formerHead.value()));
+
+                nodes.removeIf(node -> node.occurrenceId() == formerHeadId);
+                events.add(event(sequence++, "NODE_REMOVED", "linked-list-remove-detached", nodes, head,
+                        operationIndex, null, null, null, null, formerHeadId, formerHead.value(), null));
+                outcomes.add("Removed " + formerHead.value() + " from node " + formerHeadId);
                 continue;
             }
             long nodeId = nextId++;
@@ -98,8 +127,15 @@ public class LinkedListAlgorithm {
             int operationIndex, Long allocatedNodeId, Long inspectedNodeId, Long linkedNodeId, Long matchedNodeId, Long dataNodeId,
             String value, Long nextId) {
         return new Event(sequence, type, line,
-                new State("LINKED_LIST", nodes, head, operationIndex, allocatedNodeId, inspectedNodeId, linkedNodeId, matchedNodeId),
+                new State("LINKED_LIST", nodes, head, operationIndex, allocatedNodeId, inspectedNodeId, linkedNodeId, matchedNodeId, null),
                 new EventData(type, value, dataNodeId, nextId));
+    }
+
+    private static Event detachedEvent(int sequence, String type, String line, List<Node> nodes, Long head,
+            int operationIndex, long detachedNodeId, String value) {
+        return new Event(sequence, type, line,
+                new State("LINKED_LIST", nodes, head, operationIndex, null, null, null, null, detachedNodeId),
+                new EventData(type, value, detachedNodeId, null));
     }
 
     private static Node find(List<Node> nodes, long id) {

@@ -28,7 +28,7 @@ export function parseStructureCommands(source: string, capability: DataStructure
 
   source.split('\n').forEach((line, index) => {
     if (!line.trim()) return
-    const match = line.match(/^\s*([a-z]+)\s*\((.*)\)\s*$/)
+    const match = line.match(/^\s*([a-zA-Z]+)\s*\((.*)\)\s*$/)
     if (!match) {
       errors.push(error(index + 1, `Use a function-style command such as ${commandExample(capability)}.`))
       return
@@ -73,6 +73,9 @@ export function parseStructureCommands(source: string, capability: DataStructure
   return errors.length ? { errors } : { operations }
 }
 
-export function serializeStructureCommands(operations: StructureOperation[]) {
-  return operations.map(operation => operation.value === undefined ? `${operation.kind.toLowerCase()}()` : `${operation.kind.toLowerCase()}(${JSON.stringify(operation.value)})`).join('\n')
+export function serializeStructureCommands(operations: StructureOperation[], capability: DataStructureCapability) {
+  return operations.map(operation => {
+    const command = capability.commandNames[operation.kind]
+    return operation.value === undefined ? `${command}()` : `${command}(${JSON.stringify(operation.value)})`
+  }).join('\n')
 }

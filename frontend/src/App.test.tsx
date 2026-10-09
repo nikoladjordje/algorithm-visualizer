@@ -36,6 +36,59 @@ describe('App algorithm workbench',()=>{
   expect(screen.getAllByRole('status').find(status => status.textContent?.includes('Inspect node 1 and follow its next link.'))).toBeTruthy()
   expect(screen.getByText('Inspecting node 1')).toBeInTheDocument()
  })
+ it('submits and replays linked-list head removal through its reversible semantic steps', async () => {
+  const linkedListCatalog = { id: 'linked-list', name: 'Linked List', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'FIND'] } }
+  const nodes = [{ occurrenceId: 1, value: 'A', nextOccurrenceId: 2 }, { occurrenceId: 2, value: 'B', nextOccurrenceId: null }]
+  const state = (headOccurrenceId: number | null, detachedOccurrenceId: number | null, liveNodes = nodes) => ({ kind: 'LINKED_LIST', nodes: liveNodes, headOccurrenceId, activeOperationIndex: 0, allocatedOccurrenceId: null, inspectedOccurrenceId: null, linkedOccurrenceId: null, detachedOccurrenceId })
+  const linkedListTrace = { apiVersion: '2.0', algorithm: { id: 'linked-list', name: 'Linked List', family: 'DATA_STRUCTURES' }, input: { kind: 'LINKED_LIST', operations: [{ kind: 'REMOVE_FIRST' }] }, result: { kind: 'LINKED_LIST', nodes: [{ occurrenceId: 2, value: 'B', nextOccurrenceId: null }], headOccurrenceId: 2, outcomes: ['Removed A from node 1'] }, limits: { maximumEvents: 10000 }, events: [
+    { sequence: 1, type: 'HEAD_SELECTED', pseudocodeLineId: 'linked-list-select-head', state: state(1, null), data: { kind: 'HEAD_SELECTED', value: 'A', occurrenceId: 1, nextOccurrenceId: 2 } },
+    { sequence: 2, type: 'HEAD_MOVED', pseudocodeLineId: 'linked-list-advance-head', state: state(2, null), data: { kind: 'HEAD_MOVED', value: 'B', occurrenceId: 2, nextOccurrenceId: null } },
+    { sequence: 3, type: 'NODE_DETACHED', pseudocodeLineId: 'linked-list-detach-head', state: state(2, 1, [{ occurrenceId: 1, value: 'A', nextOccurrenceId: null }, { occurrenceId: 2, value: 'B', nextOccurrenceId: null }]), data: { kind: 'NODE_DETACHED', value: 'A', occurrenceId: 1, nextOccurrenceId: null } },
+    { sequence: 4, type: 'NODE_REMOVED', pseudocodeLineId: 'linked-list-remove-detached', state: state(2, null, [{ occurrenceId: 2, value: 'B', nextOccurrenceId: null }]), data: { kind: 'NODE_REMOVED', value: 'A', occurrenceId: 1, nextOccurrenceId: null } },
+  ] }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, linkedListCatalog] : linkedListTrace), { headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'linked-list')
+  await user.clear(screen.getByLabelText('Text commands'))
+  await user.type(screen.getByLabelText('Text commands'), 'removeFirst()')
+  await user.click(screen.getByRole('button', { name: 'Visualize Linked List' }))
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'LINKED_LIST', operations: [{ kind: 'REMOVE_FIRST' }] })
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getAllByRole('status').find(status => status.textContent?.includes('Move head to node 2.'))).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('Detached node 1; next null')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Previous step' }))
+  expect(screen.queryByText('Detached node 1; next null')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('remove the detached former head').parentElement).toHaveAttribute('aria-current', 'step')
+ })
+ it('keeps empty head removal visible and continues to later linked-list operations', async () => {
+  const linkedListCatalog = { id: 'linked-list', name: 'Linked List', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'FIND'] } }
+  const emptyState = { kind: 'LINKED_LIST', nodes: [], headOccurrenceId: null, activeOperationIndex: 0, allocatedOccurrenceId: null, inspectedOccurrenceId: null, linkedOccurrenceId: null }
+  const nodeState = (headOccurrenceId: number | null) => ({ kind: 'LINKED_LIST', nodes: [{ occurrenceId: 1, value: 'B', nextOccurrenceId: null }], headOccurrenceId, activeOperationIndex: 1, allocatedOccurrenceId: 1, inspectedOccurrenceId: null, linkedOccurrenceId: headOccurrenceId === null ? null : 1 })
+  const linkedListTrace = { apiVersion: '2.0', algorithm: { id: 'linked-list', name: 'Linked List', family: 'DATA_STRUCTURES' }, input: { kind: 'LINKED_LIST', operations: [{ kind: 'REMOVE_FIRST' }, { kind: 'PREPEND', value: 'B' }] }, result: { kind: 'LINKED_LIST', nodes: [{ occurrenceId: 1, value: 'B', nextOccurrenceId: null }], headOccurrenceId: 1, outcomes: ['Nothing to remove: the list is empty', 'B'] }, limits: { maximumEvents: 10000 }, events: [
+    { sequence: 1, type: 'EMPTY_STRUCTURE', pseudocodeLineId: 'linked-list-empty-removal', state: emptyState, data: { kind: 'EMPTY_STRUCTURE', value: '', occurrenceId: null, nextOccurrenceId: null } },
+    { sequence: 2, type: 'NODE_ALLOCATED', pseudocodeLineId: 'linked-list-allocate', state: nodeState(null), data: { kind: 'NODE_ALLOCATED', value: 'B', occurrenceId: 1, nextOccurrenceId: null } },
+    { sequence: 3, type: 'NEXT_INITIALIZED', pseudocodeLineId: 'linked-list-initialize-next', state: nodeState(null), data: { kind: 'NEXT_INITIALIZED', value: 'B', occurrenceId: 1, nextOccurrenceId: null } },
+    { sequence: 4, type: 'HEAD_MOVED', pseudocodeLineId: 'linked-list-move-head', state: nodeState(1), data: { kind: 'HEAD_MOVED', value: 'B', occurrenceId: 1, nextOccurrenceId: null } },
+  ] }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, linkedListCatalog] : linkedListTrace), { headers: { 'Content-Type': 'application/json' } }))))
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'linked-list')
+  await user.clear(screen.getByLabelText('Text commands'))
+  await user.type(screen.getByLabelText('Text commands'), 'removeFirst()\nprepend("B")')
+  await user.click(screen.getByRole('button', { name: 'Visualize Linked List' }))
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getAllByRole('status').find(status => status.textContent?.includes('The list is empty, so remove first leaves it unchanged.'))).toBeTruthy()
+  expect(screen.getByText('Empty linked list')).toBeInTheDocument()
+  for (let step = 0; step < 3; step++) await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByRole('img', { name: 'Linked list: B, node 1, next null.' })).toBeInTheDocument()
+ })
  it('submits find and narrates the first matched linked-list occurrence', async () => {
   const linkedListCatalog = { id: 'linked-list', name: 'Linked List', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PREPEND', 'APPEND', 'FIND'] } }
   const linkedListTrace = { apiVersion: '2.0', algorithm: { id: 'linked-list', name: 'Linked List', family: 'DATA_STRUCTURES' }, input: { kind: 'LINKED_LIST', operations: [{ kind: 'PREPEND', value: 'A' }, { kind: 'APPEND', value: 'A' }, { kind: 'FIND', value: 'A' }] }, result: { kind: 'LINKED_LIST', nodes: [{ occurrenceId: 1, value: 'A', nextOccurrenceId: 2 }, { occurrenceId: 2, value: 'A', nextOccurrenceId: null }], headOccurrenceId: 1, outcomes: ['A', 'A', 'Found A at node 1'] }, limits: { maximumEvents: 10000 }, events: [
