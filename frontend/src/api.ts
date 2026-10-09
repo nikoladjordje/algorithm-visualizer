@@ -73,7 +73,7 @@ export async function createStackTrace(operations: StructureOperation[], signal?
 export async function createQueueTrace(operations: StructureOperation[], signal?: AbortSignal): Promise<DataStructureTrace> {
   return requestTrace('/api/v2/algorithms/queue/trace', { kind: 'DATA_STRUCTURES', operations }, signal) as Promise<DataStructureTrace>
 }
-export async function createLinkedListTrace(operations: Array<{ kind: 'PREPEND' | 'APPEND'; value: string }>, signal?: AbortSignal): Promise<LinkedListTrace> {
+export async function createLinkedListTrace(operations: Array<{ kind: 'PREPEND' | 'APPEND' | 'FIND'; value: string }>, signal?: AbortSignal): Promise<LinkedListTrace> {
   return requestTrace('/api/v2/algorithms/linked-list/trace', { kind: 'LINKED_LIST', operations }, signal) as Promise<LinkedListTrace>
 }
 

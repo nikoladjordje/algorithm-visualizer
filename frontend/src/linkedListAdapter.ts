@@ -9,16 +9,21 @@ export const linkedListAdapter = {
     { id: 'linked-list-establish-head', text: 'set head to the first node' },
     { id: 'linked-list-inspect-node', text: 'inspect the current node and follow next' },
     { id: 'linked-list-link-final-node', text: 'connect the final node to the new node' },
+    { id: 'linked-list-match', text: 'stop at the first matching node' },
+    { id: 'linked-list-not-found', text: 'reach null: the label is not in the list' },
   ],
   complexity: [
     { label: 'Prepend', value: 'O(1)', explanation: 'Prepend rewires only the new node and head.' },
     { label: 'Append', value: 'O(n)', explanation: 'Append walks from head to the final node before linking.' },
+    { label: 'Find', value: 'O(n)', explanation: 'Find inspects nodes from head until the first match or null.' },
   ],
   explain(event: LinkedListEvent) {
     if (event.type === 'NODE_ALLOCATED') return `Allocate node ${event.data.occurrenceId} for ${event.data.value}.`
     if (event.type === 'NEXT_INITIALIZED') return `Set node ${event.data.occurrenceId}'s next link to ${event.data.nextOccurrenceId === null ? 'null' : `node ${event.data.nextOccurrenceId}`}.`
     if (event.type === 'NODE_INSPECTED') return `Inspect node ${event.data.occurrenceId} and follow its next link.`
     if (event.type === 'FINAL_LINK_CREATED') return `Connect final node ${event.data.occurrenceId} to node ${event.data.nextOccurrenceId}.`
+    if (event.type === 'NODE_MATCHED') return `Node ${event.data.occurrenceId} is the first match for ${event.data.value}.`
+    if (event.type === 'SEARCH_NOT_FOUND') return `Reached null: ${event.data.value} is not in the list.`
     return `Move head to node ${event.data.occurrenceId}.`
   },
 }

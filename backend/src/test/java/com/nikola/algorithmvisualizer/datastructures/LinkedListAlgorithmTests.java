@@ -59,4 +59,34 @@ class LinkedListAlgorithmTests {
         assertEquals(2L, trace.result().nodes().getFirst().nextOccurrenceId());
         assertEquals(1L, trace.events().get(4).data().occurrenceId());
     }
+
+    @Test
+    void findsOnlyTheFirstMatchingLiveOccurrenceWithoutChangingTopology() {
+        var trace = new LinkedListAlgorithm().execute(List.of(
+                new LinkedListAlgorithm.Operation("PREPEND", "A"),
+                new LinkedListAlgorithm.Operation("APPEND", "B"),
+                new LinkedListAlgorithm.Operation("APPEND", "A"),
+                new LinkedListAlgorithm.Operation("FIND", "A")));
+
+        assertEquals(List.of("NODE_INSPECTED", "NODE_MATCHED"), trace.events().subList(10, 12).stream()
+                .map(LinkedListAlgorithm.Event::type).toList());
+        assertEquals(1L, trace.events().get(11).data().occurrenceId());
+        assertEquals(List.of(1L, 2L, 3L), trace.events().getLast().state().nodes().stream()
+                .map(LinkedListAlgorithm.Node::occurrenceId).toList());
+        assertEquals(List.of("A", "B", "A", "Found A at node 1"), trace.result().outcomes());
+    }
+
+    @Test
+    void completesAnEmptyOrAbsentFindAsANotFoundOutcome() {
+        var trace = new LinkedListAlgorithm().execute(List.of(
+                new LinkedListAlgorithm.Operation("FIND", "A"),
+                new LinkedListAlgorithm.Operation("PREPEND", "B"),
+                new LinkedListAlgorithm.Operation("FIND", "A")));
+
+        assertEquals(List.of("SEARCH_NOT_FOUND", "NODE_ALLOCATED", "NEXT_INITIALIZED", "HEAD_MOVED",
+                "NODE_INSPECTED", "SEARCH_NOT_FOUND"), trace.events().stream()
+                .map(LinkedListAlgorithm.Event::type).toList());
+        assertEquals(List.of("Not found: A", "B", "Not found: A"), trace.result().outcomes());
+        assertEquals(1L, trace.result().headOccurrenceId());
+    }
 }

@@ -25,6 +25,12 @@ describe('structure commands', () => {
     })
   })
 
+  it('parses a linked-list find with JSON-style label escaping', () => {
+    expect(parseStructureCommands('find("A\\"B")', getDataStructureCapability('linked-list'))).toEqual({
+      operations: [{ kind: 'FIND', value: 'A"B' }],
+    })
+  })
+
   it.each([
     ['stack', 'push()', 'Line 1: push requires one quoted label.'],
     ['queue', 'push("A")', 'Line 1: push is not available for Queue. Use enqueue, dequeue, or peek.'],

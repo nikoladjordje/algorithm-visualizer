@@ -42,7 +42,8 @@ class AlgorithmControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[14].id").value("linked-list"))
                 .andExpect(jsonPath("$[14].constraints.operations[0]").value("PREPEND"))
-                .andExpect(jsonPath("$[14].constraints.operations[1]").value("APPEND"));
+                .andExpect(jsonPath("$[14].constraints.operations[1]").value("APPEND"))
+                .andExpect(jsonPath("$[14].constraints.operations[2]").value("FIND"));
 
         mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -72,6 +73,15 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.events.length()").value(2))
                 .andExpect(jsonPath("$.events[1].type").value("HEAD_MOVED"))
                 .andExpect(jsonPath("$.events[1].state.headOccurrenceId").value(1));
+
+        mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"LINKED_LIST\",\"operations\":[{\"kind\":\"PREPEND\",\"value\":\"A\"},{\"kind\":\"APPEND\",\"value\":\"A\"},{\"kind\":\"FIND\",\"value\":\"A\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events[6].type").value("NODE_INSPECTED"))
+                .andExpect(jsonPath("$.events[7].type").value("NODE_MATCHED"))
+                .andExpect(jsonPath("$.events[7].state.matchedOccurrenceId").value(1))
+                .andExpect(jsonPath("$.result.nodes.length()").value(2));
 
         mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -10,7 +10,7 @@ import type { StructureTrace } from './types'
 
 export type DataStructureId = 'stack' | 'queue' | 'linked-list'
 export type DataStructureOperation = StructureOperation['kind']
-const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend', APPEND: 'append' }
+const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend', APPEND: 'append', FIND: 'find' }
 
 export interface DataStructureCapability {
   id: DataStructureId
@@ -47,10 +47,10 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
   {
     id: 'linked-list',
     title: 'Linked List',
-    operations: ['PREPEND', 'APPEND'],
-    valueOperations: ['PREPEND', 'APPEND'],
+    operations: ['PREPEND', 'APPEND', 'FIND'],
+    valueOperations: ['PREPEND', 'APPEND', 'FIND'],
     commandNames,
-    createTrace: (operations, signal) => createLinkedListTrace(operations as Array<{ kind: 'PREPEND' | 'APPEND'; value: string }>, signal),
+    createTrace: (operations, signal) => createLinkedListTrace(operations as Array<{ kind: 'PREPEND' | 'APPEND' | 'FIND'; value: string }>, signal),
     Visualizer: LinkedListVisualizer,
     learningAdapter: linkedListAdapter,
   },

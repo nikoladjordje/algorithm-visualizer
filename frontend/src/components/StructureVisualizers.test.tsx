@@ -47,4 +47,13 @@ describe('structure visualizers', () => {
     expect(screen.getByLabelText('Linked list: B, node 2, next node 1; A, node 1, next null; allocated but not yet linked: C, node 3, next null. Inspecting node 1.')).toBeInTheDocument()
     expect(screen.getByText('Inspecting node 1')).toBeInTheDocument()
   })
+
+  it('identifies the first matched occurrence in the textual topology', () => {
+    render(<LinkedListVisualizer state={{ kind: 'LINKED_LIST', headOccurrenceId: 1, activeOperationIndex: 2,
+      allocatedOccurrenceId: null, inspectedOccurrenceId: 1, linkedOccurrenceId: null, matchedOccurrenceId: 1,
+      nodes: [{ occurrenceId: 1, value: 'A', nextOccurrenceId: 2 }, { occurrenceId: 2, value: 'A', nextOccurrenceId: null }] }} />)
+
+    expect(screen.getByLabelText('Linked list: A, node 1, next node 2; A, node 2, next null. Inspecting node 1. Matched node 1.')).toBeInTheDocument()
+    expect(screen.getByText('Matched node 1')).toBeInTheDocument()
+  })
 })

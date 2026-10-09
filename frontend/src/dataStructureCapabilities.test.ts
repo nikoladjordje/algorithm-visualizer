@@ -15,9 +15,9 @@ describe('data structure capabilities', () => {
       commandNames: { ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek' },
     })
     expect(getDataStructureCapability('linked-list')).toMatchObject({
-      valueOperations: ['PREPEND', 'APPEND'],
-      operations: ['PREPEND', 'APPEND'],
-      commandNames: { PREPEND: 'prepend', APPEND: 'append' },
+      valueOperations: ['PREPEND', 'APPEND', 'FIND'],
+      operations: ['PREPEND', 'APPEND', 'FIND'],
+      commandNames: { PREPEND: 'prepend', APPEND: 'append', FIND: 'find' },
     })
   })
 })
