@@ -37,11 +37,12 @@ class AlgorithmControllerTests {
     }
 
     @Test
-    void advertisesAndRunsLinkedListPrependThroughItsDedicatedTraceContract() throws Exception {
+    void advertisesAndRunsLinkedListInsertionTracesThroughItsDedicatedTraceContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[14].id").value("linked-list"))
-                .andExpect(jsonPath("$[14].constraints.operations[0]").value("PREPEND"));
+                .andExpect(jsonPath("$[14].constraints.operations[0]").value("PREPEND"))
+                .andExpect(jsonPath("$[14].constraints.operations[1]").value("APPEND"));
 
         mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -53,6 +54,24 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.events[1].type").value("NEXT_INITIALIZED"))
                 .andExpect(jsonPath("$.events[5].state.headOccurrenceId").value(2))
                 .andExpect(jsonPath("$.events[5].state.nodes[1].nextOccurrenceId").value(1));
+
+        mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"LINKED_LIST\",\"operations\":[{\"kind\":\"PREPEND\",\"value\":\"A\"},{\"kind\":\"APPEND\",\"value\":\"B\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events.length()").value(6))
+                .andExpect(jsonPath("$.events[4].type").value("NODE_INSPECTED"))
+                .andExpect(jsonPath("$.events[4].data.occurrenceId").value(1))
+                .andExpect(jsonPath("$.events[5].type").value("FINAL_LINK_CREATED"))
+                .andExpect(jsonPath("$.events[5].state.nodes[0].nextOccurrenceId").value(2));
+
+        mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"LINKED_LIST\",\"operations\":[{\"kind\":\"APPEND\",\"value\":\"A\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events.length()").value(2))
+                .andExpect(jsonPath("$.events[1].type").value("HEAD_MOVED"))
+                .andExpect(jsonPath("$.events[1].state.headOccurrenceId").value(1));
 
         mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
                         .contentType(MediaType.APPLICATION_JSON)

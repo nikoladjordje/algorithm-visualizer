@@ -22,4 +22,41 @@ class LinkedListAlgorithmTests {
         assertEquals(List.of(1L, 2L), trace.result().nodes().stream().map(LinkedListAlgorithm.Node::occurrenceId).toList());
         assertEquals(List.of("A", "A"), trace.result().outcomes());
     }
+
+    @Test
+    void tracesAppendAllocationTraversalAndFinalLinkInOrder() {
+        var trace = new LinkedListAlgorithm().execute(List.of(
+                new LinkedListAlgorithm.Operation("PREPEND", "A"),
+                new LinkedListAlgorithm.Operation("PREPEND", "B"),
+                new LinkedListAlgorithm.Operation("APPEND", "C")));
+
+        assertEquals(List.of("NODE_ALLOCATED", "NEXT_INITIALIZED", "HEAD_MOVED", "NODE_ALLOCATED",
+                "NEXT_INITIALIZED", "HEAD_MOVED", "NODE_ALLOCATED", "NODE_INSPECTED", "NODE_INSPECTED",
+                "FINAL_LINK_CREATED"), trace.events().stream().map(LinkedListAlgorithm.Event::type).toList());
+        assertEquals(List.of(2L, 1L), trace.events().subList(7, 9).stream()
+                .map(event -> event.data().occurrenceId()).toList());
+        assertEquals(3L, trace.events().getLast().state().nodes().get(0).nextOccurrenceId());
+        assertEquals(2L, trace.result().headOccurrenceId());
+    }
+
+    @Test
+    void establishesHeadWhenAppendingToAnEmptyListWithoutTraversal() {
+        var trace = new LinkedListAlgorithm().execute(List.of(new LinkedListAlgorithm.Operation("APPEND", "A")));
+
+        assertEquals(List.of("NODE_ALLOCATED", "HEAD_MOVED"),
+                trace.events().stream().map(LinkedListAlgorithm.Event::type).toList());
+        assertEquals(1L, trace.result().headOccurrenceId());
+    }
+
+    @Test
+    void preservesDistinctOccurrenceIdentityWhenAppendingADuplicateLabel() {
+        var trace = new LinkedListAlgorithm().execute(List.of(
+                new LinkedListAlgorithm.Operation("PREPEND", "A"),
+                new LinkedListAlgorithm.Operation("APPEND", "A")));
+
+        assertEquals(List.of(1L, 2L), trace.result().nodes().stream()
+                .map(LinkedListAlgorithm.Node::occurrenceId).toList());
+        assertEquals(2L, trace.result().nodes().getFirst().nextOccurrenceId());
+        assertEquals(1L, trace.events().get(4).data().occurrenceId());
+    }
 }

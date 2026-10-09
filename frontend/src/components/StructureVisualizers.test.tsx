@@ -22,7 +22,7 @@ describe('structure visualizers', () => {
 
   it('narrates head, stable node identities, next links, and null', () => {
     render(<LinkedListVisualizer state={{ kind: 'LINKED_LIST', headOccurrenceId: 2, activeOperationIndex: 1,
-      allocatedOccurrenceId: 2, linkedOccurrenceId: 2,
+      allocatedOccurrenceId: 2, inspectedOccurrenceId: null, linkedOccurrenceId: 2,
       nodes: [{ occurrenceId: 1, value: 'A', nextOccurrenceId: null }, { occurrenceId: 2, value: 'A', nextOccurrenceId: 1 }] }} />)
 
     expect(screen.getByLabelText('Linked list: A, node 2, next node 1; A, node 1, next null.')).toBeInTheDocument()
@@ -32,10 +32,19 @@ describe('structure visualizers', () => {
 
   it('keeps an allocated but unlinked node visible before head moves', () => {
     render(<LinkedListVisualizer state={{ kind: 'LINKED_LIST', headOccurrenceId: null, activeOperationIndex: 0,
-      allocatedOccurrenceId: 1, linkedOccurrenceId: null,
+      allocatedOccurrenceId: 1, inspectedOccurrenceId: null, linkedOccurrenceId: null,
       nodes: [{ occurrenceId: 1, value: 'A', nextOccurrenceId: null }] }} />)
 
     expect(screen.getByLabelText('Linked list: empty, head null; allocated but not yet linked: A, node 1, next null.')).toBeInTheDocument()
     expect(screen.getByText(/Allocated node 1:/)).toBeInTheDocument()
+  })
+
+  it('announces the node currently inspected during an append traversal', () => {
+    render(<LinkedListVisualizer state={{ kind: 'LINKED_LIST', headOccurrenceId: 2, activeOperationIndex: 1,
+      allocatedOccurrenceId: 3, inspectedOccurrenceId: 1, linkedOccurrenceId: null,
+      nodes: [{ occurrenceId: 1, value: 'A', nextOccurrenceId: null }, { occurrenceId: 2, value: 'B', nextOccurrenceId: 1 }, { occurrenceId: 3, value: 'C', nextOccurrenceId: null }] }} />)
+
+    expect(screen.getByLabelText('Linked list: B, node 2, next node 1; A, node 1, next null; allocated but not yet linked: C, node 3, next null. Inspecting node 1.')).toBeInTheDocument()
+    expect(screen.getByText('Inspecting node 1')).toBeInTheDocument()
   })
 })

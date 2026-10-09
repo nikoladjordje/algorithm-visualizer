@@ -10,7 +10,7 @@ public class LinkedListAlgorithm {
     public record Operation(String kind, String value) { }
     public record Node(long occurrenceId, String value, Long nextOccurrenceId) { }
     public record State(String kind, List<Node> nodes, Long headOccurrenceId, int activeOperationIndex,
-            Long allocatedOccurrenceId, Long linkedOccurrenceId) {
+            Long allocatedOccurrenceId, Long inspectedOccurrenceId, Long linkedOccurrenceId) {
         public State { nodes = List.copyOf(nodes); }
     }
     public record EventData(String kind, String value, long occurrenceId, Long nextOccurrenceId) { }
@@ -32,25 +32,50 @@ public class LinkedListAlgorithm {
             long nodeId = nextId++;
             nodes.add(new Node(nodeId, operation.value(), null));
             events.add(event(sequence++, "NODE_ALLOCATED", "linked-list-allocate", nodes, head, operationIndex,
-                    nodeId, null, operation.value(), null));
+                    nodeId, null, null, nodeId, operation.value(), null));
+
+            if ("APPEND".equals(operation.kind())) {
+                if (head == null) {
+                    head = nodeId;
+                    events.add(event(sequence++, "HEAD_MOVED", "linked-list-establish-head", nodes, head,
+                            operationIndex, nodeId, null, nodeId, nodeId, operation.value(), null));
+                } else {
+                    long currentId = head;
+                    while (true) {
+                        Node current = find(nodes, currentId);
+                        events.add(event(sequence++, "NODE_INSPECTED", "linked-list-inspect-node", nodes, head,
+                                operationIndex, nodeId, currentId, null, currentId, current.value(), current.nextOccurrenceId()));
+                        if (current.nextOccurrenceId() == null) {
+                            replace(nodes, currentId, new Node(currentId, current.value(), nodeId));
+                            events.add(event(sequence++, "FINAL_LINK_CREATED", "linked-list-link-final-node", nodes,
+                                    head, operationIndex, nodeId, currentId, currentId, currentId, current.value(), nodeId));
+                            break;
+                        }
+                        currentId = current.nextOccurrenceId();
+                    }
+                }
+                outcomes.add(operation.value());
+                continue;
+            }
 
             replace(nodes, nodeId, new Node(nodeId, operation.value(), head));
             events.add(event(sequence++, "NEXT_INITIALIZED", "linked-list-initialize-next", nodes, head,
-                    operationIndex, nodeId, nodeId, operation.value(), head));
+                    operationIndex, nodeId, null, nodeId, nodeId, operation.value(), head));
 
             head = nodeId;
             events.add(event(sequence++, "HEAD_MOVED", "linked-list-move-head", nodes, head, operationIndex,
-                    nodeId, nodeId, operation.value(), find(nodes, nodeId).nextOccurrenceId()));
+                    nodeId, null, nodeId, nodeId, operation.value(), find(nodes, nodeId).nextOccurrenceId()));
             outcomes.add(operation.value());
         }
         return new Trace(new Result("LINKED_LIST", nodes, head, outcomes), events);
     }
 
     private static Event event(int sequence, String type, String line, List<Node> nodes, Long head,
-            int operationIndex, long nodeId, Long linkedNodeId, String value, Long nextId) {
+            int operationIndex, long allocatedNodeId, Long inspectedNodeId, Long linkedNodeId, long dataNodeId,
+            String value, Long nextId) {
         return new Event(sequence, type, line,
-                new State("LINKED_LIST", nodes, head, operationIndex, nodeId, linkedNodeId),
-                new EventData(type, value, nodeId, nextId));
+                new State("LINKED_LIST", nodes, head, operationIndex, allocatedNodeId, inspectedNodeId, linkedNodeId),
+                new EventData(type, value, dataNodeId, nextId));
     }
 
     private static Node find(List<Node> nodes, long id) {

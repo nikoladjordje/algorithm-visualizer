@@ -10,13 +10,13 @@ import type { StructureTrace } from './types'
 
 export type DataStructureId = 'stack' | 'queue' | 'linked-list'
 export type DataStructureOperation = StructureOperation['kind']
-const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend' }
+const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend', APPEND: 'append' }
 
 export interface DataStructureCapability {
   id: DataStructureId
   title: 'Stack' | 'Queue' | 'Linked List'
   operations: DataStructureOperation[]
-  valueOperation: DataStructureOperation
+  valueOperations: DataStructureOperation[]
   commandNames: Record<DataStructureOperation, string>
   createTrace: (operations: StructureOperation[], signal?: AbortSignal) => Promise<StructureTrace>
   Visualizer: typeof StackVisualizer | typeof QueueVisualizer | typeof LinkedListVisualizer
@@ -28,7 +28,7 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
     id: 'stack',
     title: 'Stack',
     operations: ['PUSH', 'POP', 'PEEK'],
-    valueOperation: 'PUSH',
+    valueOperations: ['PUSH'],
     commandNames,
     createTrace: createStackTrace,
     Visualizer: StackVisualizer,
@@ -38,7 +38,7 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
     id: 'queue',
     title: 'Queue',
     operations: ['ENQUEUE', 'DEQUEUE', 'PEEK'],
-    valueOperation: 'ENQUEUE',
+    valueOperations: ['ENQUEUE'],
     commandNames,
     createTrace: createQueueTrace,
     Visualizer: QueueVisualizer,
@@ -47,10 +47,10 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
   {
     id: 'linked-list',
     title: 'Linked List',
-    operations: ['PREPEND'],
-    valueOperation: 'PREPEND',
+    operations: ['PREPEND', 'APPEND'],
+    valueOperations: ['PREPEND', 'APPEND'],
     commandNames,
-    createTrace: (operations, signal) => createLinkedListTrace(operations as Array<{ kind: 'PREPEND'; value: string }>, signal),
+    createTrace: (operations, signal) => createLinkedListTrace(operations as Array<{ kind: 'PREPEND' | 'APPEND'; value: string }>, signal),
     Visualizer: LinkedListVisualizer,
     learningAdapter: linkedListAdapter,
   },

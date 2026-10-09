@@ -17,11 +17,12 @@ import { parseGraphInput, parseIntegerList, validateGraphInput } from './input'
 import { parseStructureCommands, serializeStructureCommands } from './structureCommands'
 import { resolveAlgorithmAdapter } from './algorithmCapabilities'
 import { dataStructureCapabilities } from './dataStructureCapabilities'
+import { linkedListAdapter } from './linkedListAdapter'
 import type { GraphPreset } from './graphPresets'
 import type { SearchPreset } from './searchPresets'
 import { searchPresets } from './searchPresets'
 import { nextStep, previousStep } from './playback'
-import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureState, DynamicProgrammingTrace, GraphAlgorithmTrace, LinkedListState, MetricType, SearchTrace, StructureOperation, StructureTrace, TreeOperation, TreeTrace, TraceItem, VisualizerTrace } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureState, DynamicProgrammingTrace, GraphAlgorithmTrace, LinkedListEvent, LinkedListState, MetricType, SearchTrace, StructureOperation, StructureTrace, TreeOperation, TreeTrace, TraceItem, VisualizerTrace } from './types'
 import './App.css'
 const SAMPLE_INPUT = '8, 3, 5, 1, 9, 6, 2, 7, 4'
 type RequestState = 'empty' | 'loading' | 'ready' | 'unavailable'
@@ -108,8 +109,8 @@ function App() {
   async function visualizeStructure() {
     if (!structureCapability || !structureDraft) return
     const { operations } = structureDraft
-    if (operations.length < 1 || operations.length > 50 || operations.some(operation => !structureCapability.operations.includes(operation.kind) || (operation.kind === structureCapability.valueOperation && (!operation.value?.trim() || operation.value.length > 40)))) {
-      setInputError(`Provide 1–50 valid ${structureCapability.title} operations; ${structureCapability.commandNames[structureCapability.valueOperation]} values must contain 1–40 characters.`)
+    if (operations.length < 1 || operations.length > 50 || operations.some(operation => !structureCapability.operations.includes(operation.kind) || (structureCapability.valueOperations.includes(operation.kind) && (!operation.value?.trim() || operation.value.length > 40)))) {
+      setInputError(`Provide 1–50 valid ${structureCapability.title} operations; labels must contain 1–40 characters.`)
       return
     }
     abortRef.current?.abort(); const controller = new AbortController(), request = ++requestRef.current; abortRef.current = controller
@@ -124,7 +125,8 @@ function App() {
   const structureCompletion = structureTrace ? structureTrace.algorithm.id === 'linked-list'
     ? (() => { const result = structureTrace.result as { headOccurrenceId: number | null }; return `Linked List sequence complete. ${result.headOccurrenceId === null ? 'The list is empty.' : `Head is node ${result.headOccurrenceId}.`}` })()
     : (() => { const result = structureTrace.result as { values: string[] }; return `${structureTrace.algorithm.name} sequence complete. ${result.values.length ? structureTrace.algorithm.id === 'queue' ? `Front ${result.values[0]}; rear ${result.values.at(-1)}.` : `Top ${result.values.at(-1)}.` : 'The structure is empty.'}` })() : ''
-  const explanation = completed ? (isKnapsack ? `The best value is ${knapsackTrace?.result.maximumValue}.` : structureTrace ? structureCompletion : isGraph ? graphTrace ? graphAdapter!.complete(graphTrace.result) : '' : treeTrace ? treeTrace.result.kind === 'LOOKUP' ? treeTrace.result.found ? `Found ${treeTrace.result.target} after inspecting ${treeTrace.result.visitedValues.join(' → ')}.` : `${treeTrace.result.target} was not found after inspecting ${treeTrace.result.visitedValues.join(' → ')}.` : `${treeTrace.result.kind.charAt(0) + treeTrace.result.kind.slice(1).toLowerCase()} traversal complete: ${treeTrace.result.visitedValues.join(' → ')}.` : searchTrace ? searchTrace.result.found ? `Found ${searchTrace.input.target} at index ${searchTrace.result.foundIndex}.` : `${searchTrace.input.target} was not found.` : 'Every value is now in ascending order.') : graphEvent ? graphAdapter!.explain(graphEvent) : treeEvent ? treeAdapter!.explain(treeEvent) : knapsackEvent ? knapsackAdapter!.explain(knapsackEvent) : sortingEvent ? adapter.explain(sortingEvent) : searchEvent ? searchExplanation : trace ? 'Start playback to inspect the trace.' : 'Build a trace to see why each step happens.'
+  const structureExplanation = structureTrace?.algorithm.id === 'linked-list' && structureEvent ? linkedListAdapter.explain(structureEvent as LinkedListEvent) : ''
+  const explanation = completed ? (isKnapsack ? `The best value is ${knapsackTrace?.result.maximumValue}.` : structureTrace ? structureCompletion : isGraph ? graphTrace ? graphAdapter!.complete(graphTrace.result) : '' : treeTrace ? treeTrace.result.kind === 'LOOKUP' ? treeTrace.result.found ? `Found ${treeTrace.result.target} after inspecting ${treeTrace.result.visitedValues.join(' → ')}.` : `${treeTrace.result.target} was not found after inspecting ${treeTrace.result.visitedValues.join(' → ')}.` : `${treeTrace.result.kind.charAt(0) + treeTrace.result.kind.slice(1).toLowerCase()} traversal complete: ${treeTrace.result.visitedValues.join(' → ')}.` : searchTrace ? searchTrace.result.found ? `Found ${searchTrace.input.target} at index ${searchTrace.result.foundIndex}.` : `${searchTrace.input.target} was not found.` : 'Every value is now in ascending order.') : structureExplanation || graphEvent ? structureExplanation || graphAdapter!.explain(graphEvent!) : treeEvent ? treeAdapter!.explain(treeEvent) : knapsackEvent ? knapsackAdapter!.explain(knapsackEvent) : sortingEvent ? adapter.explain(sortingEvent) : searchEvent ? searchExplanation : trace ? 'Start playback to inspect the trace.' : 'Build a trace to see why each step happens.'
   const buffer: TraceItem[] = sortingEvent && 'buffer' in sortingEvent.data ? sortingEvent.data.buffer : []
   const eventItems = sortingEvent?.state.items
   const graphWarning = graphAdapter?.inputWarning([...(graphTrace?.input.edges ?? []), ...(parsedGraph?.edges ?? [])])

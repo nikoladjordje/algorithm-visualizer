@@ -14,6 +14,14 @@ function availableCommands(capability: DataStructureCapability) {
   return `${commands.slice(0, -1).join(', ')}, or ${commands.at(-1)}`
 }
 
+function commandExample(capability: DataStructureCapability) {
+  const valueOperation = capability.valueOperations[0]
+  const noValueOperation = capability.operations.find(operation => !capability.valueOperations.includes(operation))
+  return noValueOperation
+    ? `${capability.commandNames[valueOperation]}("A") or ${capability.commandNames[noValueOperation]}()`
+    : `${capability.commandNames[valueOperation]}("A")`
+}
+
 export function parseStructureCommands(source: string, capability: DataStructureCapability): StructureCommandParseResult {
   const operations: StructureOperation[] = []
   const errors: string[] = []
@@ -22,7 +30,7 @@ export function parseStructureCommands(source: string, capability: DataStructure
     if (!line.trim()) return
     const match = line.match(/^\s*([a-z]+)\s*\((.*)\)\s*$/)
     if (!match) {
-      errors.push(error(index + 1, `Use a function-style command such as ${capability.commandNames[capability.valueOperation]}("A") or ${capability.commandNames[capability.operations.find(operation => operation !== capability.valueOperation)!]}().`))
+      errors.push(error(index + 1, `Use a function-style command such as ${commandExample(capability)}.`))
       return
     }
 
@@ -33,7 +41,7 @@ export function parseStructureCommands(source: string, capability: DataStructure
       return
     }
 
-    const takesLabel = operation === capability.valueOperation
+    const takesLabel = capability.valueOperations.includes(operation)
     if (!takesLabel && argument.trim()) {
       errors.push(error(index + 1, `${command} does not accept a label.`))
       return
