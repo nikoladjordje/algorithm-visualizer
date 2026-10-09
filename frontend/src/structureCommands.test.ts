@@ -56,4 +56,12 @@ describe('structure commands', () => {
       errors: ['Line 2: wat is not available for Queue. Use enqueue, dequeue, or peek.'],
     })
   })
+
+  it.each([
+    ['prepend()', 'Line 1: prepend requires one quoted label.'],
+    ['append("A")\nremoveFirst("A")', 'Line 2: removeFirst does not accept a label.'],
+    ['find("A")\nunknown()', 'Line 2: unknown is not available for Linked List. Use prepend, append, removeFirst, or find.'],
+  ])('reports actionable malformed Linked List commands without a partial parse', (source, message) => {
+    expect(parseStructureCommands(source, getDataStructureCapability('linked-list'))).toEqual({ errors: [message] })
+  })
 })

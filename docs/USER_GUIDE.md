@@ -134,6 +134,42 @@ A newer run or algorithm switch aborts an in-flight request. A late response can
 currently selected algorithm. Validation feedback can be corrected and resubmitted; transient
 request failures show a retry action without discarding the current draft.
 
+## Data Structures: Linked List
+
+Choose **Linked List** to author one sequence against a list that starts empty. The structured
+editor and text-command editor are synchronized views of the same sequence. Use one command per
+line:
+
+```text
+prepend("A")
+append("B")
+find("A")
+removeFirst()
+```
+
+`prepend`, `append`, and `find` take a JSON-style quoted label. Labels contain 1–40 nonblank
+characters, a sequence contains 1–50 operations, and repeated labels are allowed. A malformed
+line receives immediate, line-specific feedback while the last valid sequence remains available
+for playback. Every structure retains its own draft; moving away from a non-empty Stack, Queue, or
+Linked List draft asks for confirmation before discarding it.
+
+The diagram and its text alternative show `head`, each node's stable identity, each `next` link,
+and `null`. Duplicate labels receive occurrence badges while they coexist. Playback announces and
+explains allocation, traversal, linking, head movement, detachment, matching, and outcomes; its
+controls work with the keyboard, and reduced-motion preferences retain the same snapshots and
+announcements without animated transitions.
+
+Prepend allocates a node, initializes its `next` link to the old head, then moves `head`, so its
+structural work is constant. Append allocates a node and, unless the list is empty, inspects from
+`head` through the final node before linking it, so it may be linear. Find similarly inspects from
+`head` and stops at the first match; an absent label is a completed **not-found** outcome after
+reaching `null`. Remove first selects the current head, moves `head` to its successor, clears the
+former head's link, then removes that detached node. On an empty list it is a visible successful
+no-op, and later operations still run.
+
+This lesson is intentionally a singly linked list: it has no tail pointer, `prev` links, cycles,
+indexed insertion or removal, removal by value, direct node editing, or multiple lists.
+
 ## Versioned learning material
 
 Sorting and search pseudocode mappings and explanations are in `frontend/src/adapters.ts`; fixed

@@ -1,6 +1,7 @@
 # Algorithm Trace API v2
 
-API v2 is the family-discriminated contract for sorting, searching, graph traversal, and pathfinding. All
+API v2 is the family-discriminated contract for sorting, searching, graph traversal, pathfinding, trees,
+dynamic programming, and data structures. All
 responses use JSON; errors use `application/problem+json`.
 
 ## Routes and catalog
@@ -8,8 +9,8 @@ responses use JSON; errors use `application/problem+json`.
 - `GET /api/v2/algorithms`
 - `POST /api/v2/algorithms/{algorithmId}/trace`
 
-Catalog order is `insertion`, `selection`, `bubble`, `merge`, `quick`, `heap`, `linear-search`,
-`binary-search`, `bfs`, `dfs`, then `dijkstra`. Every entry contains `id`, `name`, `family`, `contractVersion: "2.0"`, and
+Catalog order includes `stack`, `queue`, and `linked-list` after the existing algorithm families. Every
+entry contains `id`, `name`, `family`, `contractVersion: "2.0"`, and
 family-specific constraints.
 
 | Family | Algorithms | Constraints |
@@ -18,6 +19,7 @@ family-specific constraints.
 | `SEARCH` | `linear-search`, `binary-search` | 0–50 signed 32-bit values and signed 32-bit target; binary search requires non-decreasing values |
 | `GRAPH_TRAVERSAL` | `bfs`, `dfs` | 1–12 nodes, at most 66 edges, undirected, optional weights 1–99 |
 | `PATHFINDING` | `dijkstra` | Same graph bounds, weights 1–99, `unweightedEdgeCost: 1`, `destinationRequired: true` |
+| `DATA_STRUCTURES` | `stack`, `queue`, `linked-list` | Structure-specific operation sequence constraints |
 
 Graph labels match `^[A-Za-z0-9_-]{1,16}$`. Both graph families advertise `directed: false` and
 `weighted: true`; “weighted” means the input may carry weights, not that every algorithm uses them.
@@ -38,6 +40,52 @@ Trace<TInput, TResult, TEvent> {
 Events have a contiguous 1-based `sequence`, `type`, `pseudocodeLineId`, complete immutable
 `state`, and typed `data`. Input, result, state, and algorithm family discriminators agree, and
 `data.kind` equals event `type`.
+
+## Linked List
+
+`linked-list` is a singly linked-list lesson in the `DATA_STRUCTURES` family. Its trace endpoint is
+`POST /api/v2/algorithms/linked-list/trace`; it accepts only the dedicated `LINKED_LIST` request
+shape, not the Stack or Queue operation shape.
+
+```json
+{
+  "kind": "LINKED_LIST",
+  "operations": [
+    { "kind": "PREPEND", "value": "A" },
+    { "kind": "APPEND", "value": "B" },
+    { "kind": "FIND", "value": "A" },
+    { "kind": "REMOVE_FIRST" }
+  ]
+}
+```
+
+An operation sequence has 1–50 operations and always begins with an empty list. `PREPEND`,
+`APPEND`, and `FIND` require a nonblank text value of 1–40 characters. `REMOVE_FIRST` accepts no
+value. Equal labels are valid: each insertion receives a distinct, stable `occurrenceId`.
+
+The result has `kind: "LINKED_LIST"`, final `nodes`, nullable `headOccurrenceId`, and one learner
+outcome per authored operation. A node is `{ occurrenceId, value, nextOccurrenceId }`; `null`
+`nextOccurrenceId` denotes the end of the list. Each immutable event state contains the live node
+topology, `headOccurrenceId`, `activeOperationIndex`, and nullable allocated, inspected, linked,
+matched, or detached occurrence identifiers.
+
+| Event type | Meaning |
+| --- | --- |
+| `NODE_ALLOCATED` | Allocate a node for `PREPEND` or `APPEND`. |
+| `NEXT_INITIALIZED` | Point a prepended node's `next` link at the prior head. |
+| `HEAD_MOVED` | Establish or change the head. Empty-list append establishes it directly. |
+| `NODE_INSPECTED` | Inspect a node while appending or finding. |
+| `FINAL_LINK_CREATED` | Connect the previous final node to an appended node. |
+| `HEAD_SELECTED` | Identify the node `REMOVE_FIRST` will remove. |
+| `NODE_DETACHED` | Clear the former head's `next` link before removing it from live topology. |
+| `NODE_REMOVED` | Remove the detached former head from live topology. |
+| `NODE_MATCHED` | Stop `FIND` at the first matching occurrence. |
+| `SEARCH_NOT_FOUND` | Complete `FIND` after traversal reaches `null`. |
+| `EMPTY_STRUCTURE` | Complete `REMOVE_FIRST` on an empty list as a visible no-op. |
+
+`FIND` and empty `REMOVE_FIRST` do not mutate topology, and later operations continue. The service
+owns traversal and rewiring semantics; clients render the supplied snapshots and event data rather
+than recreating list behavior.
 
 ## Sorting
 

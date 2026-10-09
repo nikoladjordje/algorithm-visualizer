@@ -606,22 +606,23 @@ describe('App algorithm workbench',()=>{
    expect.objectContaining({ textContent: 'Queue sequence complete. Front B; rear B.' }),
   ]))
  })
- it('confirms before discarding the active Stack draft while retaining the Queue draft', async () => {
+ it('confirms before discarding the active Stack draft while entering Linked List', async () => {
   const stackCatalog = { id: 'stack', name: 'Stack', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PUSH', 'POP', 'PEEK'] } }
   const queueCatalog = { id: 'queue', name: 'Queue', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ENQUEUE', 'DEQUEUE', 'PEEK'] } }
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([...catalog, stackCatalog, queueCatalog]), { headers: { 'Content-Type': 'application/json' } })))
+  const linkedListCatalog = { id: 'linked-list', name: 'Linked List', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'FIND'] } }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([...catalog, stackCatalog, queueCatalog, linkedListCatalog]), { headers: { 'Content-Type': 'application/json' } })))
   const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
   const user = userEvent.setup()
   render(<App />)
 
   await user.selectOptions(await screen.findByLabelText('Algorithm'), 'stack')
-  await user.selectOptions(screen.getByLabelText('Algorithm'), 'queue')
-  expect(confirm).toHaveBeenCalledWith('Changing from Stack to Queue will discard this operation sequence. Continue?')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'linked-list')
+  expect(confirm).toHaveBeenCalledWith('Changing from Stack to Linked List will discard this operation sequence. Continue?')
   expect(screen.getByText('Stack operations')).toBeInTheDocument()
 
-  await user.selectOptions(screen.getByLabelText('Algorithm'), 'queue')
-  expect(screen.getByText('Queue operations')).toBeInTheDocument()
-  expect(screen.getByLabelText('Enqueue value 1')).toHaveValue('A')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'linked-list')
+  expect(screen.getByText('Linked List operations')).toBeInTheDocument()
+  expect(screen.getByLabelText('Prepend value 1')).toHaveValue('A')
  })
  it('synchronizes Queue rows with text commands and retains the last valid sequence for invalid text', async () => {
   const queueCatalog = { id: 'queue', name: 'Queue', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ENQUEUE', 'DEQUEUE', 'PEEK'] } }

@@ -15,6 +15,8 @@ keeping algorithm behavior separate from presentation and playback.
   iterative depth-first search, or Dijkstra pathfinding.
 - Solve an authored 0/1 Knapsack problem through bottom-up tabulation and deterministic solution
   reconstruction, including every table decision and the final selected items.
+- Author Stack, Queue, and singly Linked List operation sequences, then inspect their backend-owned
+  semantic traces through synchronized structured and text-command editors.
 - Play, pause, reset, seek, step forward or backward, and adjust playback speed.
 - Inspect pseudocode, operation metrics, algorithm state, and explanatory text at every step.
 - Compare BFS's queue, DFS's stack, and Dijkstra's ordered priority frontier while retaining the
@@ -36,9 +38,9 @@ The frontend requests algorithm metadata and traces from the backend. During loc
 Vite proxies `/api` requests to the Spring Boot server at `http://localhost:8080`.
 
 The v2 API uses family-discriminated contracts for sorting, search, graph traversal, pathfinding,
-trees, and dynamic programming. BFS and DFS remain `GRAPH_TRAVERSAL`; Dijkstra uses
+trees, dynamic programming, and data structures. BFS and DFS remain `GRAPH_TRAVERSAL`; Dijkstra uses
 `PATHFINDING`; the binary search tree uses `TREE`; and 0/1 Knapsack uses
-`DYNAMIC_PROGRAMMING`. A trace contains immutable snapshots and typed semantic events, allowing
+`DYNAMIC_PROGRAMMING`; Stack, Queue, and Linked List use `DATA_STRUCTURES`. A trace contains immutable snapshots and typed semantic events, allowing
 the frontend to render any playback step without reimplementing the algorithm.
 
 See the [v2 API reference](./backend/API_V2.md), [v1 compatibility reference](./backend/API_V1.md),
@@ -141,29 +143,20 @@ excluding an item yield the same value, it deterministically excludes that item.
 | Pathfinding | Available | Dijkstra minimum-cost paths with tentative distances and relaxation steps. |
 | Trees | Available | Unbalanced binary search tree construction, lookup, preorder, inorder, and postorder traversal. |
 | Dynamic programming | Available | 0/1 Knapsack with authored items, bottom-up table updates, and reconstructed solutions. |
-| Data structures | Proposed | One major epic delivered through small, independently shippable milestones: stack and queue foundations, linked lists, deques, heaps and priority queues, hash tables, tree structures, then specialized structures. |
+| Data structures | Available | Stack, Queue, and singly Linked List operation sequences with semantic traces; deques, heaps, hash tables, and other structures remain future milestones. |
 | Backtracking | Proposed | Explore choices, dead ends, and undo steps through a maze solver or N-Queens. |
 | Recursion and divide-and-conquer | Proposed | Expose call structure and recursive decomposition in algorithms such as merge sort and binary search. |
 | Directed graph algorithms | Proposed | Add directed graph authoring with topological sorting and cycle detection. |
 | Minimum spanning trees | Proposed | Use weighted graphs to teach Prim's or Kruskal's minimum-total-cost connectivity. |
 | String matching | Proposed | Compare naive matching with KMP's prefix-table-guided skips. |
 
-The first Data Structures delivery will cover stack and queue foundations together: stack push,
-pop, and peek; queue enqueue, dequeue, and peek; plus explanatory empty-structure outcomes. A
-learner will author an operation sequence from an empty structure and replay the resulting
-stateful session. Values are short text labels so the lesson remains focused on access order. It
-will provide both a structured operation editor and a text command language, and remain a small,
-independently shippable milestone within the larger Data Structures epic. The two authoring
-surfaces will stay synchronized as views of the same operation sequence.
-Each sequence will select either Stack or Queue, never mix both structures.
-The text form uses one function-style command with quoted labels per line, such as `push("A")` or
-`enqueue("Task 1")`. Sequences contain 1–50 operations, labels contain 1–40 characters, and
-malformed text receives immediate line-specific feedback while retaining the last valid sequence.
-Playback shows semantic steps for each operation. Stacks use a fixed vertical layout at the top;
-queues use a fixed horizontal layout from front to rear.
-An empty read or removal is a no-op and the sequence continues. Repeated labels are valid, distinct
-inserted occurrences; equal labels receive stable badges only when duplicates coexist. Changing
-between Stack and Queue starts a new empty sequence after confirmation when there is a draft.
+Data Structures lessons start with an empty selected structure and accept 1–50 operations. Stack
+and Queue provide their established push/pop/peek and enqueue/dequeue/peek paths. Linked List adds
+`prepend("A")`, `append("A")`, `find("A")`, and `removeFirst()`: its replay makes node allocation,
+`head`, `next` links, traversal, matching, and detachment visible. Text labels contain 1–40
+characters; malformed text gets line-specific feedback without replacing the last valid sequence.
+Repeated labels are distinct occurrences, with stable badges only while duplicates coexist.
+Changing selected structures asks for confirmation before a non-empty draft is discarded.
 
 Direct visual graph editing and directed graphs are not currently supported. Proposed families
 describe the intended direction and may change as the interaction and trace contracts evolve. Tree

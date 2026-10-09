@@ -4,6 +4,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Collections;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -105,6 +107,40 @@ class AlgorithmControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"kind\":\"LINKED_LIST\",\"operations\":[{\"kind\":\"REMOVE_FIRST\",\"value\":\"A\"}]}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("operations[0].value"));
+    }
+
+    @Test
+    void exposesACompleteMixedLinkedListLessonThroughTheV2TraceEnvelope() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"LINKED_LIST\",\"operations\":[{\"kind\":\"REMOVE_FIRST\"},{\"kind\":\"APPEND\",\"value\":\"A\"},{\"kind\":\"PREPEND\",\"value\":\"B\"},{\"kind\":\"FIND\",\"value\":\"A\"},{\"kind\":\"FIND\",\"value\":\"missing\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.apiVersion").value("2.0"))
+                .andExpect(jsonPath("$.algorithm.id").value("linked-list"))
+                .andExpect(jsonPath("$.input.kind").value("LINKED_LIST"))
+                .andExpect(jsonPath("$.events[0].sequence").value(1))
+                .andExpect(jsonPath("$.events[0].type").value("EMPTY_STRUCTURE"))
+                .andExpect(jsonPath("$.events[0].data.kind").value("EMPTY_STRUCTURE"))
+                .andExpect(jsonPath("$.events[2].type").value("HEAD_MOVED"))
+                .andExpect(jsonPath("$.events[4].type").value("NEXT_INITIALIZED"))
+                .andExpect(jsonPath("$.events[5].type").value("HEAD_MOVED"))
+                .andExpect(jsonPath("$.events[8].type").value("NODE_MATCHED"))
+                .andExpect(jsonPath("$.events[8].state.matchedOccurrenceId").value(1))
+                .andExpect(jsonPath("$.events[11].type").value("SEARCH_NOT_FOUND"))
+                .andExpect(jsonPath("$.events[11].data.kind").value("SEARCH_NOT_FOUND"))
+                .andExpect(jsonPath("$.result.headOccurrenceId").value(2))
+                .andExpect(jsonPath("$.result.nodes[1].nextOccurrenceId").value(1))
+                .andExpect(jsonPath("$.result.outcomes[4]").value("Not found: missing"));
+    }
+
+    @Test
+    void rejectsMoreThanFiftyLinkedListOperations() throws Exception {
+        String operations = String.join(",", Collections.nCopies(51, "{\"kind\":\"REMOVE_FIRST\"}"));
+        mockMvc.perform(post("/api/v2/algorithms/linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"LINKED_LIST\",\"operations\":[" + operations + "]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.field").value("operations"));
     }
 
     @Test
