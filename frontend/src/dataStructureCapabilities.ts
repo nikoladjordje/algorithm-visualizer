@@ -1,26 +1,28 @@
 import type { StructureOperation } from './types'
-import { createLinkedListTrace, createQueueTrace, createStackTrace } from './api'
+import { createDoublyLinkedListTrace, createLinkedListTrace, createQueueTrace, createStackTrace } from './api'
+import { DoublyLinkedListVisualizer } from './components/DoublyLinkedListVisualizer'
 import { LinkedListVisualizer } from './components/LinkedListVisualizer'
 import { QueueVisualizer } from './components/QueueVisualizer'
 import { StackVisualizer } from './components/StackVisualizer'
 import { queueAdapter } from './queueAdapter'
 import { stackAdapter } from './stackAdapter'
 import { linkedListAdapter } from './linkedListAdapter'
+import { doublyLinkedListAdapter } from './doublyLinkedListAdapter'
 import type { StructureTrace } from './types'
 
-export type DataStructureId = 'stack' | 'queue' | 'linked-list'
+export type DataStructureId = 'stack' | 'queue' | 'linked-list' | 'doubly-linked-list'
 export type DataStructureOperation = StructureOperation['kind']
 const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend', APPEND: 'append', REMOVE_FIRST: 'removeFirst', FIND: 'find' }
 
 export interface DataStructureCapability {
   id: DataStructureId
-  title: 'Stack' | 'Queue' | 'Linked List'
+  title: 'Stack' | 'Queue' | 'Linked List' | 'Doubly Linked List'
   operations: DataStructureOperation[]
   valueOperations: DataStructureOperation[]
   commandNames: Record<DataStructureOperation, string>
   createTrace: (operations: StructureOperation[], signal?: AbortSignal) => Promise<StructureTrace>
-  Visualizer: typeof StackVisualizer | typeof QueueVisualizer | typeof LinkedListVisualizer
-  learningAdapter: typeof stackAdapter | typeof queueAdapter | typeof linkedListAdapter
+  Visualizer: typeof StackVisualizer | typeof QueueVisualizer | typeof LinkedListVisualizer | typeof DoublyLinkedListVisualizer
+  learningAdapter: typeof stackAdapter | typeof queueAdapter | typeof linkedListAdapter | typeof doublyLinkedListAdapter
 }
 
 export const dataStructureCapabilities: DataStructureCapability[] = [
@@ -53,6 +55,16 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
     createTrace: (operations, signal) => createLinkedListTrace(operations as Array<{ kind: 'PREPEND' | 'APPEND' | 'FIND'; value: string } | { kind: 'REMOVE_FIRST' }>, signal),
     Visualizer: LinkedListVisualizer,
     learningAdapter: linkedListAdapter,
+  },
+  {
+    id: 'doubly-linked-list',
+    title: 'Doubly Linked List',
+    operations: ['PREPEND', 'APPEND'],
+    valueOperations: ['PREPEND', 'APPEND'],
+    commandNames,
+    createTrace: (operations, signal) => createDoublyLinkedListTrace(operations as Array<{ kind: 'PREPEND' | 'APPEND'; value: string }>, signal),
+    Visualizer: DoublyLinkedListVisualizer,
+    learningAdapter: doublyLinkedListAdapter,
   },
 ]
 

@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureTrace, DepthFirstSearchTrace, DynamicProgrammingTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, KnapsackItem, LinkedListTrace, PathfindingTrace, ProblemDetail, SearchTrace, StructureOperation, StructureTrace, TreeOperation, TreeTrace } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureTrace, DepthFirstSearchTrace, DoublyLinkedListTrace, DynamicProgrammingTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, KnapsackItem, LinkedListTrace, PathfindingTrace, ProblemDetail, SearchTrace, StructureOperation, StructureTrace, TreeOperation, TreeTrace } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -75,6 +75,9 @@ export async function createQueueTrace(operations: StructureOperation[], signal?
 }
 export async function createLinkedListTrace(operations: Array<{ kind: 'PREPEND' | 'APPEND' | 'FIND'; value: string } | { kind: 'REMOVE_FIRST' }>, signal?: AbortSignal): Promise<LinkedListTrace> {
   return requestTrace('/api/v2/algorithms/linked-list/trace', { kind: 'LINKED_LIST', operations }, signal) as Promise<LinkedListTrace>
+}
+export async function createDoublyLinkedListTrace(operations: Array<{ kind: 'PREPEND' | 'APPEND'; value: string }>, signal?: AbortSignal): Promise<DoublyLinkedListTrace> {
+  return requestTrace('/api/v2/algorithms/doubly-linked-list/trace', { kind: 'DATA_STRUCTURES', operations }, signal) as Promise<DoublyLinkedListTrace>
 }
 
 export async function createGraphTraversalTrace(

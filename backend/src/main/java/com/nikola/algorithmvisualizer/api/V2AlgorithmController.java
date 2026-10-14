@@ -17,6 +17,7 @@ import com.nikola.algorithmvisualizer.dynamicprogramming.KnapsackAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.StackAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.QueueAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.LinkedListAlgorithm;
+import com.nikola.algorithmvisualizer.datastructures.DoublyLinkedListAlgorithm;
 import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
@@ -63,12 +64,14 @@ public class V2AlgorithmController {
     private final StackAlgorithm stack;
     private final QueueAlgorithm queue;
     private final LinkedListAlgorithm linkedList;
+    private final DoublyLinkedListAlgorithm doublyLinkedList;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
             DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch,
             BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree, KnapsackAlgorithm knapsack,
-            StackAlgorithm stack, QueueAlgorithm queue, LinkedListAlgorithm linkedList) {
+            StackAlgorithm stack, QueueAlgorithm queue, LinkedListAlgorithm linkedList,
+            DoublyLinkedListAlgorithm doublyLinkedList) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
@@ -80,6 +83,7 @@ public class V2AlgorithmController {
         this.stack = stack;
         this.queue = queue;
         this.linkedList = linkedList;
+        this.doublyLinkedList = doublyLinkedList;
     }
 
     @GetMapping
@@ -115,6 +119,9 @@ public class V2AlgorithmController {
         catalog.add(new V2Contracts.CatalogEntry("linked-list", "Linked List", DATA_STRUCTURES, "2.0",
                 new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
                         List.of("PREPEND", "APPEND", "REMOVE_FIRST", "FIND"))));
+        catalog.add(new V2Contracts.CatalogEntry("doubly-linked-list", "Doubly Linked List", DATA_STRUCTURES, "2.0",
+                new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
+                        List.of("PREPEND", "APPEND"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
                 new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
@@ -184,6 +191,17 @@ public class V2AlgorithmController {
                     new V2Contracts.AlgorithmInfo("queue", "Queue", DATA_STRUCTURES),
                     new V2Contracts.DataStructureInput(DATA_STRUCTURES, request.operations()), queueTrace.result(),
                     new V2Contracts.Limits(MAXIMUM_EVENTS), queueTrace.events());
+        }
+        if ("doubly-linked-list".equals(algorithmId)) {
+            if (!DATA_STRUCTURES.equals(request.kind())) throw new AlgorithmFamilyMismatchException(algorithmId, DATA_STRUCTURES);
+            validateDoublyLinkedList(request);
+            var operations = request.operations().stream().map(operation -> new DoublyLinkedListAlgorithm.Operation(operation.kind(), operation.value())).toList();
+            var listTrace = doublyLinkedList.execute(operations);
+            if (listTrace.events().size() > MAXIMUM_EVENTS) throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            return new V2Contracts.DataStructureTrace("2.0",
+                    new V2Contracts.AlgorithmInfo("doubly-linked-list", "Doubly Linked List", DATA_STRUCTURES),
+                    new V2Contracts.DataStructureInput(DATA_STRUCTURES, request.operations()), listTrace.result(),
+                    new V2Contracts.Limits(MAXIMUM_EVENTS), listTrace.events());
         }
         if ("bfs".equals(algorithmId)) {
             if (!GRAPH_TRAVERSAL.equals(request.kind())) {
@@ -434,6 +452,22 @@ public class V2AlgorithmController {
             if (!"REMOVE_FIRST".equals(operation.kind())
                     && (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40)) {
                 throw new GraphValidationException(field + ".value", "linked list values must contain 1 through 40 characters");
+            }
+        }
+    }
+
+    private static void validateDoublyLinkedList(V2Request request) {
+        if (request.operations() == null || request.operations().isEmpty() || request.operations().size() > 50) {
+            throw new GraphValidationException("operations", "Provide from 1 through 50 doubly linked list operations");
+        }
+        for (int index = 0; index < request.operations().size(); index++) {
+            var operation = request.operations().get(index);
+            String field = "operations[" + index + "]";
+            if (operation == null || (!"PREPEND".equals(operation.kind()) && !"APPEND".equals(operation.kind()))) {
+                throw new GraphValidationException(field + ".kind", "Use PREPEND or APPEND");
+            }
+            if (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40) {
+                throw new GraphValidationException(field + ".value", "doubly linked list values must contain 1 through 40 characters");
             }
         }
     }

@@ -21,6 +21,26 @@ class AlgorithmControllerTests {
     private MockMvc mockMvc;
 
     @Test
+    void advertisesAndRunsDoublyLinkedListEndpointAdditionsThroughTheTopologyContract() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[15].id").value("doubly-linked-list"))
+                .andExpect(jsonPath("$[15].constraints.operations[0]").value("PREPEND"))
+                .andExpect(jsonPath("$[15].constraints.operations[1]").value("APPEND"));
+        mockMvc.perform(post("/api/v2/algorithms/doubly-linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DATA_STRUCTURES\",\"operations\":[{\"kind\":\"PREPEND\",\"value\":\"A\"},{\"kind\":\"APPEND\",\"value\":\"B\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.algorithm.id").value("doubly-linked-list"))
+                .andExpect(jsonPath("$.events[1].type").value("ENDPOINTS_ESTABLISHED"))
+                .andExpect(jsonPath("$.events[3].type").value("PREV_ASSIGNED"))
+                .andExpect(jsonPath("$.events[4].type").value("NEXT_ASSIGNED"))
+                .andExpect(jsonPath("$.events[5].state.tailOccurrenceId").value(2))
+                .andExpect(jsonPath("$.result.nodes[0].nextOccurrenceId").value(2))
+                .andExpect(jsonPath("$.result.nodes[1].prevOccurrenceId").value(1));
+    }
+
+    @Test
     void advertisesAndRunsQueueOperationsThroughTheDataStructuresContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
@@ -363,7 +383,7 @@ class AlgorithmControllerTests {
     void advertisesAllSortingAlgorithmsThroughTheV2SortingContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(16))
+                .andExpect(jsonPath("$.length()").value(17))
                 .andExpect(jsonPath("$[0].id").value("insertion"))
                 .andExpect(jsonPath("$[1].id").value("selection"))
                 .andExpect(jsonPath("$[2].id").value("bubble"))
@@ -398,7 +418,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeBreadthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(16))
+                .andExpect(jsonPath("$.length()").value(17))
                 .andExpect(jsonPath("$[8].id").value("bfs"))
                 .andExpect(jsonPath("$[8].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[8].constraints.kind").value("GRAPH_TRAVERSAL"));
@@ -434,7 +454,7 @@ class AlgorithmControllerTests {
     void runsSingleNodeIterativeDepthFirstSearchThroughV2() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(16))
+                .andExpect(jsonPath("$.length()").value(17))
                 .andExpect(jsonPath("$[9].id").value("dfs"))
                 .andExpect(jsonPath("$[9].family").value("GRAPH_TRAVERSAL"))
                 .andExpect(jsonPath("$[9].constraints.kind").value("GRAPH_TRAVERSAL"))
