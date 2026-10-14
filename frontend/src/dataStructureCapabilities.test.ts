@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { dataStructureCapabilities, getDataStructureCapability } from './dataStructureCapabilities'
 
 describe('data structure capabilities', () => {
-  it('describes Stack, Queue, and Linked List authoring without structure-specific branches', () => {
-    expect(dataStructureCapabilities.map(capability => capability.id)).toEqual(['stack', 'queue', 'linked-list'])
+  it('describes Stack, Queue, Linked List, and Doubly Linked List authoring without structure-specific branches', () => {
+    expect(dataStructureCapabilities.map(capability => capability.id)).toEqual(['stack', 'queue', 'linked-list', 'doubly-linked-list'])
     expect(getDataStructureCapability('stack')).toMatchObject({
       valueOperations: ['PUSH'],
       operations: ['PUSH', 'POP', 'PEEK'],
@@ -18,6 +18,11 @@ describe('data structure capabilities', () => {
       valueOperations: ['PREPEND', 'APPEND', 'FIND'],
       operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'FIND'],
       commandNames: { PREPEND: 'prepend', APPEND: 'append', REMOVE_FIRST: 'removeFirst', FIND: 'find' },
+    })
+    expect(getDataStructureCapability('doubly-linked-list')).toMatchObject({
+      valueOperations: ['PREPEND', 'APPEND'],
+      operations: ['PREPEND', 'APPEND'],
+      commandNames: { PREPEND: 'prepend', APPEND: 'append' },
     })
   })
 })

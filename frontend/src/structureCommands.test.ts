@@ -25,6 +25,12 @@ describe('structure commands', () => {
     })
   })
 
+  it('parses separate doubly-linked-list endpoint additions', () => {
+    expect(parseStructureCommands('prepend("A")\nappend("B")', getDataStructureCapability('doubly-linked-list'))).toEqual({
+      operations: [{ kind: 'PREPEND', value: 'A' }, { kind: 'APPEND', value: 'B' }],
+    })
+  })
+
   it('parses a linked-list find with JSON-style label escaping', () => {
     expect(parseStructureCommands('find("A\\"B")', getDataStructureCapability('linked-list'))).toEqual({
       operations: [{ kind: 'FIND', value: 'A"B' }],

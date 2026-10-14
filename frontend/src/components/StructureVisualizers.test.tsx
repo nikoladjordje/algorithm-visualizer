@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { QueueVisualizer } from './QueueVisualizer'
 import { StackVisualizer } from './StackVisualizer'
 import { LinkedListVisualizer } from './LinkedListVisualizer'
+import { DoublyLinkedListVisualizer } from './DoublyLinkedListVisualizer'
 
 describe('structure visualizers', () => {
   it('labels equal value occurrences only while they coexist', () => {
@@ -64,5 +65,11 @@ describe('structure visualizers', () => {
 
     expect(screen.getByLabelText('Linked list: B, node 2, next null; detached from live topology: A, node 1, next null. Detached node 1 has next null.')).toBeInTheDocument()
     expect(screen.getByText('Detached node 1; next null')).toBeInTheDocument()
+  })
+
+  it('narrates head, tail, and reciprocal links without relying on color', () => {
+    render(<DoublyLinkedListVisualizer state={{ kind: 'DOUBLY_LINKED_LIST', headOccurrenceId: 1, tailOccurrenceId: 2, activeOperationIndex: 1, allocatedOccurrenceId: null, linkedOccurrenceId: 2,
+      nodes: [{ occurrenceId: 1, value: 'A', prevOccurrenceId: null, nextOccurrenceId: 2 }, { occurrenceId: 2, value: 'A', prevOccurrenceId: 1, nextOccurrenceId: null }] }} />)
+    expect(screen.getByLabelText('Doubly linked list: head node 1; tail node 2; A, node 1, prev null, next node 2; A, node 2, prev node 1, next null. Active operation 2. Linking node 2.')).toBeInTheDocument()
   })
 })
