@@ -15,7 +15,7 @@ keeping algorithm behavior separate from presentation and playback.
   iterative depth-first search, or Dijkstra pathfinding.
 - Solve an authored 0/1 Knapsack problem through bottom-up tabulation and deterministic solution
   reconstruction, including every table decision and the final selected items.
-- Author Stack, Queue, and singly Linked List operation sequences, then inspect their backend-owned
+- Author Stack, Queue, Linked List, Doubly Linked List, and Deque operation sequences, then inspect their backend-owned
   semantic traces through synchronized structured and text-command editors.
 - Play, pause, reset, seek, step forward or backward, and adjust playback speed.
 - Inspect pseudocode, operation metrics, algorithm state, and explanatory text at every step.
@@ -40,7 +40,7 @@ Vite proxies `/api` requests to the Spring Boot server at `http://localhost:8080
 The v2 API uses family-discriminated contracts for sorting, search, graph traversal, pathfinding,
 trees, dynamic programming, and data structures. BFS and DFS remain `GRAPH_TRAVERSAL`; Dijkstra uses
 `PATHFINDING`; the binary search tree uses `TREE`; and 0/1 Knapsack uses
-`DYNAMIC_PROGRAMMING`; Stack, Queue, and Linked List use `DATA_STRUCTURES`. A trace contains immutable snapshots and typed semantic events, allowing
+`DYNAMIC_PROGRAMMING`; the structure lessons use `DATA_STRUCTURES`. A trace contains immutable snapshots and typed semantic events, allowing
 the frontend to render any playback step without reimplementing the algorithm.
 
 See the [v2 API reference](./backend/API_V2.md), [v1 compatibility reference](./backend/API_V1.md),
@@ -143,7 +143,7 @@ excluding an item yield the same value, it deterministically excludes that item.
 | Pathfinding | Available | Dijkstra minimum-cost paths with tentative distances and relaxation steps. |
 | Trees | Available | Unbalanced binary search tree construction, lookup, preorder, inorder, and postorder traversal. |
 | Dynamic programming | Available | 0/1 Knapsack with authored items, bottom-up table updates, and reconstructed solutions. |
-| Data structures | Available | Stack, Queue, and singly Linked List operation sequences with semantic traces; deques, heaps, hash tables, and other structures remain future milestones. |
+| Data structures | Available | Stack, Queue, Linked List, Doubly Linked List, and Deque operation sequences with semantic traces; heaps and hash tables remain future milestones. |
 | Backtracking | Proposed | Explore choices, dead ends, and undo steps through a maze solver or N-Queens. |
 | Recursion and divide-and-conquer | Proposed | Expose call structure and recursive decomposition in algorithms such as merge sort and binary search. |
 | Directed graph algorithms | Proposed | Add directed graph authoring with topological sorting and cycle detection. |

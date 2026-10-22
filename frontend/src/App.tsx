@@ -66,7 +66,7 @@ function App() {
   function changeAlgorithm(id: string) {
     const currentStructure = dataStructureCapabilities.find(capability => capability.id === algorithmId)
     const nextStructure = dataStructureCapabilities.find(capability => capability.id === id)
-    if (currentStructure && nextStructure && currentStructure.id !== nextStructure.id && currentStructure.id !== 'deque' && nextStructure.id !== 'deque') {
+    if (currentStructure && nextStructure && currentStructure.id !== nextStructure.id) {
       const currentDraft = structureDrafts[currentStructure.id]
       if (currentDraft.operations.length && !window.confirm(`Changing from ${currentStructure.title} to ${nextStructure.title} will discard this operation sequence. Continue?`)) return
       setStructureDrafts(drafts => ({

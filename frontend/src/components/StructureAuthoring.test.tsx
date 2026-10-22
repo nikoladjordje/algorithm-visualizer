@@ -21,6 +21,20 @@ function LinkedListAuthoringHarness() {
 }
 
 describe('StructureAuthoring', () => {
+  it.each(['doubly-linked-list', 'deque'] as const)('loads a synchronized both-ends experiment for %s', async id => {
+    const user = userEvent.setup()
+    function Harness() {
+      const [operations, setOperations] = useState<StructureOperation[]>([])
+      const [commands, setCommands] = useState('')
+      return <StructureAuthoring capability={getDataStructureCapability(id)} operations={operations} commands={commands} onOperationsChange={setOperations} onCommandsChange={setCommands} onRun={() => undefined} />
+    }
+    render(<Harness />)
+    await user.click(screen.getByRole('button', { name: 'Load both-ends experiment' }))
+    expect(screen.getByLabelText('Text commands')).toHaveValue(id === 'deque'
+      ? 'addFirst("A")\naddLast("A")\naddFirst("B")\npeekFirst()\npeekLast()\nremoveLast()\nremoveFirst()\nremoveFirst()\npeekLast()'
+      : 'prepend("A")\nappend("A")\nprepend("B")\nremoveLast()\nremoveFirst()\nremoveFirst()\nremoveLast()')
+    expect(screen.getAllByLabelText(/Operation \d/)).toHaveLength(id === 'deque' ? 9 : 7)
+  })
   it('edits, reorders, and removes rows while keeping the command text synchronized', async () => {
     const user = userEvent.setup()
     render(<AuthoringHarness />)

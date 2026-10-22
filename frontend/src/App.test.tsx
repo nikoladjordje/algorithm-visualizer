@@ -13,6 +13,33 @@ const trace={apiVersion:'2.0',algorithm:{id:'insertion',name:'Insertion Sort',fa
 beforeEach(()=>{history.replaceState(null,'','/');vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?catalog:trace),{status:200,headers:{'Content-Type':'application/json'}})))})
 afterEach(()=>vi.unstubAllGlobals())
 describe('App algorithm workbench',()=>{
+  it.each([
+    { id: 'deque', name: 'Deque', operations: ['ADD_FIRST', 'ADD_LAST', 'REMOVE_FIRST', 'REMOVE_LAST', 'PEEK_FIRST', 'PEEK_LAST'] },
+    { id: 'doubly-linked-list', name: 'Doubly Linked List', operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'REMOVE_LAST'] },
+  ])('cancels a $name request and ignores a late response while retaining its draft', async entry => {
+    let resolveTrace!: (response: Response) => void
+    let signal: AbortSignal | undefined
+    const pending = new Promise<Response>(resolve => { resolveTrace = resolve })
+    const structure = { ...entry, family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: entry.operations } }
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/api/v2/algorithms')) return Promise.resolve(new Response(JSON.stringify([...catalog, structure]), { headers: { 'Content-Type': 'application/json' } }))
+      signal = init?.signal as AbortSignal
+      return pending
+    }))
+    const user = userEvent.setup()
+    render(<App />)
+    const algorithm = await screen.findByLabelText('Algorithm')
+    await user.selectOptions(algorithm, entry.id)
+    const draft = (screen.getByLabelText('Text commands') as HTMLTextAreaElement).value
+    await user.click(screen.getByRole('button', { name: `Visualize ${entry.name}` }))
+    await user.selectOptions(algorithm, 'insertion')
+    expect(signal?.aborted).toBe(true)
+    resolveTrace(new Response(JSON.stringify({ apiVersion: '2.0', algorithm: { id: entry.id, family: 'DATA_STRUCTURES' }, events: [] }), { headers: { 'Content-Type': 'application/json' } }))
+    await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument())
+    await user.selectOptions(algorithm, entry.id)
+    expect(screen.getByLabelText('Text commands')).toHaveValue(draft)
+    expect(screen.getByText('Ready')).toBeInTheDocument()
+  })
  it('retains a separate deque draft and replays endpoint reads accessibly', async () => {
   const entry = { id: 'deque', name: 'Deque', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ADD_FIRST', 'ADD_LAST', 'PEEK_FIRST', 'PEEK_LAST'] } }
   const stack = { id: 'stack', name: 'Stack', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PUSH', 'POP', 'PEEK'] } }
@@ -29,7 +56,7 @@ describe('App algorithm workbench',()=>{
   await user.selectOptions(await screen.findByLabelText('Algorithm'), 'deque')
   await user.clear(screen.getByLabelText('Text commands'))
   await user.type(screen.getByLabelText('Text commands'), 'addFirst("A")\npeekLast()')
-  await user.selectOptions(screen.getByLabelText('Algorithm'), 'stack')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'insertion')
   await user.selectOptions(screen.getByLabelText('Algorithm'), 'deque')
   expect(screen.getByLabelText('Text commands')).toHaveValue('addFirst("A")\npeekLast()')
   await user.click(screen.getByRole('button', { name: 'Visualize Deque' }))
@@ -39,6 +66,23 @@ describe('App algorithm workbench',()=>{
   expect(screen.getByRole('img', { name: /Deque: front node 1; rear node 1; A, node 1, prev null, next null/ })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Next step' }))
   expect(screen.getAllByRole('status').some(status => status.textContent?.includes('Rear: A (node 1)'))).toBe(true)
+ })
+ it('confirms before discarding a deque draft when switching structures', async () => {
+  const entry = { id: 'deque', name: 'Deque', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ADD_FIRST', 'ADD_LAST', 'REMOVE_FIRST', 'REMOVE_LAST', 'PEEK_FIRST', 'PEEK_LAST'] } }
+  const stack = { id: 'stack', name: 'Stack', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { ...entry.constraints, operations: ['PUSH', 'POP', 'PEEK'] } }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([...catalog, stack, entry]), { headers: { 'Content-Type': 'application/json' } })))
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'deque')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'stack')
+  expect(screen.getByLabelText('Algorithm')).toHaveValue('deque')
+  expect(confirm).toHaveBeenCalledWith('Changing from Deque to Stack will discard this operation sequence. Continue?')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'stack')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'insertion')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'deque')
+  expect(screen.getByLabelText('Text commands')).toHaveValue('')
+  confirm.mockRestore()
  })
  it('authors and replays deque endpoint removal in both directions', async () => {
   const entry = { id: 'deque', name: 'Deque', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ADD_FIRST', 'ADD_LAST', 'REMOVE_FIRST', 'REMOVE_LAST', 'PEEK_FIRST', 'PEEK_LAST'] } }

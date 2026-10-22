@@ -9,7 +9,7 @@ responses use JSON; errors use `application/problem+json`.
 - `GET /api/v2/algorithms`
 - `POST /api/v2/algorithms/{algorithmId}/trace`
 
-Catalog order includes `stack`, `queue`, and `linked-list` after the existing algorithm families. Every
+Catalog order includes `stack`, `queue`, `linked-list`, `doubly-linked-list`, and `deque` after the existing algorithm families. Every
 entry contains `id`, `name`, `family`, `contractVersion: "2.0"`, and
 family-specific constraints.
 
@@ -19,7 +19,7 @@ family-specific constraints.
 | `SEARCH` | `linear-search`, `binary-search` | 0–50 signed 32-bit values and signed 32-bit target; binary search requires non-decreasing values |
 | `GRAPH_TRAVERSAL` | `bfs`, `dfs` | 1–12 nodes, at most 66 edges, undirected, optional weights 1–99 |
 | `PATHFINDING` | `dijkstra` | Same graph bounds, weights 1–99, `unweightedEdgeCost: 1`, `destinationRequired: true` |
-| `DATA_STRUCTURES` | `stack`, `queue`, `linked-list` | Structure-specific operation sequence constraints |
+| `DATA_STRUCTURES` | `stack`, `queue`, `linked-list`, `doubly-linked-list`, `deque` | Structure-specific operation sequence constraints |
 
 Graph labels match `^[A-Za-z0-9_-]{1,16}$`. Both graph families advertise `directed: false` and
 `weighted: true`; “weighted” means the input may carry weights, not that every algorithm uses them.
@@ -86,6 +86,26 @@ matched, or detached occurrence identifiers.
 `FIND` and empty `REMOVE_FIRST` do not mutate topology, and later operations continue. The service
 owns traversal and rewiring semantics; clients render the supplied snapshots and event data rather
 than recreating list behavior.
+
+## Doubly Linked List and Deque
+
+`POST /api/v2/algorithms/doubly-linked-list/trace` and `POST /api/v2/algorithms/deque/trace`
+accept `kind: "DATA_STRUCTURES"` and an ordered `operations` array. Doubly Linked List accepts
+`PREPEND` and `APPEND` with a `value`, and `REMOVE_FIRST` and `REMOVE_LAST` without one. Deque
+accepts `ADD_FIRST` and `ADD_LAST` with a `value`, and `REMOVE_FIRST`, `REMOVE_LAST`,
+`PEEK_FIRST`, and `PEEK_LAST` without one. Each sequence starts empty and has 1–50 operations;
+values are nonblank strings of 1–40 characters. Duplicate labels have distinct occurrence IDs.
+
+Results contain nodes, size, ordered outcomes, and nullable endpoint occurrence IDs: `head` and
+`tail` for the list, `front` and `rear` for the deque. Nodes carry `nextOccurrenceId` and
+`prevOccurrenceId`. Complete empty states have both endpoints null; a single node is both
+endpoints. The first node's prev and last node's next are null, and reciprocal links connect the
+same nodes in both directions. Intermediate snapshots expose individual link and endpoint changes,
+so they may represent a transition before those complete-state invariants are restored.
+Empty removals and peeks are successful no-ops; peeks never mutate topology. Traces expose
+allocation, endpoint selection and movement, link changes, detachment, and completion without
+traversal for these constant-time endpoint operations. The common 10,000-event trace limit applies.
+Circular structures, indexed operations, and arbitrary link editing are outside this contract.
 
 ## Sorting
 

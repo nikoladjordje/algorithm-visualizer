@@ -16,6 +16,19 @@ function operationLabel(kind: StructureOperation['kind']) {
   return kind.split('_').map(word => `${word.charAt(0)}${word.slice(1).toLowerCase()}`).join(' ')
 }
 
+const presets: Partial<Record<DataStructureCapability['id'], StructureOperation[]>> = {
+  'doubly-linked-list': [
+    { kind: 'PREPEND', value: 'A' }, { kind: 'APPEND', value: 'A' },
+    { kind: 'PREPEND', value: 'B' }, { kind: 'REMOVE_LAST' },
+    { kind: 'REMOVE_FIRST' }, { kind: 'REMOVE_FIRST' }, { kind: 'REMOVE_LAST' },
+  ],
+  deque: [
+    { kind: 'ADD_FIRST', value: 'A' }, { kind: 'ADD_LAST', value: 'A' },
+    { kind: 'ADD_FIRST', value: 'B' }, { kind: 'PEEK_FIRST' }, { kind: 'PEEK_LAST' },
+    { kind: 'REMOVE_LAST' }, { kind: 'REMOVE_FIRST' }, { kind: 'REMOVE_FIRST' }, { kind: 'PEEK_LAST' },
+  ],
+}
+
 export function StructureAuthoring({ capability, operations, commands, inputError, onOperationsChange, onCommandsChange, onRun }: StructureAuthoringProps) {
   function replaceOperations(nextOperations: StructureOperation[]) {
     onOperationsChange(nextOperations)
@@ -37,6 +50,7 @@ export function StructureAuthoring({ capability, operations, commands, inputErro
   }
 
   return <div className="input-row structure-authoring">
+    {presets[capability.id] && <button type="button" onClick={() => replaceOperations(presets[capability.id]!)}>Load both-ends experiment</button>}
     <fieldset>
       <legend>{capability.title} operations</legend>
       {operations.map((operation, index) => <div key={index}>

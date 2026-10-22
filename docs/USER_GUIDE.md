@@ -151,7 +151,7 @@ removeFirst()
 characters, a sequence contains 1–50 operations, and repeated labels are allowed. A malformed
 line receives immediate, line-specific feedback while the last valid sequence remains available
 for playback. Every structure retains its own draft; moving away from a non-empty Stack, Queue, or
-Linked List draft asks for confirmation before discarding it.
+Linked List draft asks for confirmation before discarding it when switching directly to another structure.
 
 The diagram and its text alternative show `head`, each node's stable identity, each `next` link,
 and `null`. Duplicate labels receive occurrence badges while they coexist. Playback announces and
@@ -169,6 +169,28 @@ no-op, and later operations still run.
 
 This lesson is intentionally a singly linked list: it has no tail pointer, `prev` links, cycles,
 indexed insertion or removal, removal by value, direct node editing, or multiple lists.
+
+## Doubly Linked List and Deque
+
+Choose **Doubly Linked List** to explore `prepend("A")`, `append("A")`, `removeFirst()`,
+and `removeLast()`. Choose **Deque** for `addFirst("A")`, `addLast("A")`, `removeFirst()`,
+`removeLast()`, `peekFirst()`, and `peekLast()`. Load the both-ends experiment to explore
+duplicate labels, changes at both ends, and a return to empty; the deque experiment also reads
+both endpoints. The same sequence and label bounds and synchronized editors described above apply.
+Each structure has its own draft; switching directly between structures confirms before discarding
+a non-empty current draft.
+
+The list calls its endpoints `head` and `tail`; the deque calls them `front` and `rear`.
+Each node shows `next` and `prev`, with stable node identities for duplicate labels. In a completed
+empty topology both endpoints are null; for one node they identify the same node. The first node's
+`prev` and last node's `next` are null, and the links connect the same nodes in opposite directions.
+Playback shows intermediate link changes and detachment as well as the completed topology. Endpoint
+additions, removals, and peeks take constant structural work; peeks do not change topology. Empty
+removals and peeks are visible no-ops and later commands continue. Text alternatives, keyboard
+controls, announcements, and reduced-motion support remain available throughout playback.
+
+These lessons do not include circular structures, indexed operations, removal by value, arbitrary
+link editing, or array-backed deques.
 
 ## Versioned learning material
 
