@@ -64,4 +64,24 @@ class DequeAlgorithmTests {
         assertEquals(null, trace.result().frontOccurrenceId());
         assertEquals(null, trace.result().rearOccurrenceId());
     }
+    @Test
+    void removingFrontPreservesEarlierSnapshotsAndRewiresDuplicateNodes() {
+        var trace = new DequeAlgorithm().execute(List.of(
+                new DequeAlgorithm.Operation("ADD_LAST", "A"),
+                new DequeAlgorithm.Operation("ADD_LAST", "A"),
+                new DequeAlgorithm.Operation("REMOVE_FIRST", null),
+                new DequeAlgorithm.Operation("REMOVE_LAST", null)));
+        var removal = trace.events().stream().filter(e -> e.state().activeOperationIndex() == 2).toList();
+        assertEquals(List.of("ENDPOINT_SELECTED", "HEAD_MOVED", "PREV_CLEARED", "NODE_DETACHED", "REMOVAL_COMPLETED"),
+                removal.stream().map(DequeAlgorithm.Event::type).toList());
+        assertEquals(1L, removal.getFirst().state().frontOccurrenceId());
+        assertEquals(2L, removal.getFirst().state().rearOccurrenceId());
+        assertEquals(1L, removal.getFirst().state().nodes().get(1).prevOccurrenceId());
+        var committed = removal.getLast().state();
+        assertEquals(2L, committed.frontOccurrenceId());
+        assertEquals(2L, committed.rearOccurrenceId());
+        assertEquals(null, committed.nodes().getFirst().prevOccurrenceId());
+        assertEquals(null, committed.nodes().getFirst().nextOccurrenceId());
+        assertEquals(0, trace.result().size());
+    }
 }

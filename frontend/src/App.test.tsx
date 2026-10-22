@@ -40,6 +40,34 @@ describe('App algorithm workbench',()=>{
   await user.click(screen.getByRole('button', { name: 'Next step' }))
   expect(screen.getAllByRole('status').some(status => status.textContent?.includes('Rear: A (node 1)'))).toBe(true)
  })
+ it('authors and replays deque endpoint removal in both directions', async () => {
+  const entry = { id: 'deque', name: 'Deque', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ADD_FIRST', 'ADD_LAST', 'REMOVE_FIRST', 'REMOVE_LAST', 'PEEK_FIRST', 'PEEK_LAST'] } }
+  const node = { occurrenceId: 1, value: 'A', nextOccurrenceId: null, prevOccurrenceId: null }
+  const state = (nodes: typeof node[], endpoint: number | null) => ({ kind: 'DEQUE', nodes, frontOccurrenceId: endpoint, rearOccurrenceId: endpoint, activeOperationIndex: 0, allocatedOccurrenceId: null, linkedOccurrenceId: nodes.length ? 1 : null })
+  const trace = { apiVersion: '2.0', algorithm: { id: 'deque', name: 'Deque', family: 'DATA_STRUCTURES' }, input: { kind: 'DATA_STRUCTURES', operations: [{ kind: 'REMOVE_LAST' }] }, result: { kind: 'DEQUE', nodes: [], frontOccurrenceId: null, rearOccurrenceId: null, size: 0, outcomes: ['Removed A from node 1'] }, limits: { maximumEvents: 10000 }, events: [
+    { sequence: 1, type: 'ENDPOINT_SELECTED', pseudocodeLineId: 'doubly-linked-list-select-endpoint', state: state([node], 1), data: { kind: 'ENDPOINT_SELECTED', value: 'A', occurrenceId: 1, relatedOccurrenceId: null } },
+    { sequence: 2, type: 'NODE_DETACHED', pseudocodeLineId: 'doubly-linked-list-detach', state: state([node], null), data: { kind: 'NODE_DETACHED', value: 'A', occurrenceId: 1, relatedOccurrenceId: null } },
+    { sequence: 3, type: 'REMOVAL_COMPLETED', pseudocodeLineId: 'doubly-linked-list-removal-complete', state: state([], null), data: { kind: 'REMOVAL_COMPLETED', value: 'A', occurrenceId: 1, relatedOccurrenceId: null } },
+  ] }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, entry] : trace), { headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'deque')
+  await user.clear(screen.getByLabelText('Text commands'))
+  await user.type(screen.getByLabelText('Text commands'), 'removeLast()')
+  await user.click(screen.getByRole('button', { name: 'Visualize Deque' }))
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'DATA_STRUCTURES', operations: [{ kind: 'REMOVE_LAST' }] })
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getAllByRole('status').some(status => status.textContent?.includes('Detach node 1'))).toBe(true)
+  expect(screen.getByText(/Node outside the front chain 1/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Previous step' }))
+  expect(screen.queryByText(/Node outside the front chain 1/)).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getByText('Empty deque')).toBeInTheDocument()
+ })
  it('authors and replays doubly linked list endpoint removal in both directions', async () => {
   const entry = { id: 'doubly-linked-list', name: 'Doubly Linked List', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'REMOVE_LAST'] } }
   const node = { occurrenceId: 1, value: 'A', nextOccurrenceId: null, prevOccurrenceId: null }
