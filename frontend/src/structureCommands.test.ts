@@ -38,6 +38,14 @@ describe('structure commands', () => {
     expect(serializeStructureCommands(operations, capability)).toBe('removeFirst()\nremoveLast()')
   })
 
+  it('round trips deque additions and reads', () => {
+    const capability = getDataStructureCapability('deque')
+    const operations = [{ kind: 'ADD_FIRST' as const, value: 'A' }, { kind: 'ADD_LAST' as const, value: 'B' }, { kind: 'PEEK_FIRST' as const }, { kind: 'PEEK_LAST' as const }]
+    const commands = 'addFirst("A")\naddLast("B")\npeekFirst()\npeekLast()'
+    expect(parseStructureCommands(commands, capability)).toEqual({ operations })
+    expect(serializeStructureCommands(operations, capability)).toBe(commands)
+  })
+
   it('parses a linked-list find with JSON-style label escaping', () => {
     expect(parseStructureCommands('find("A\\"B")', getDataStructureCapability('linked-list'))).toEqual({
       operations: [{ kind: 'FIND', value: 'A"B' }],

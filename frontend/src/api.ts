@@ -1,4 +1,4 @@
-import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureTrace, DepthFirstSearchTrace, DoublyLinkedListTrace, DynamicProgrammingTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, KnapsackItem, LinkedListTrace, PathfindingTrace, ProblemDetail, SearchTrace, StructureOperation, StructureTrace, TreeOperation, TreeTrace } from './types'
+import type { AlgorithmCatalogEntry, AlgorithmTrace, DataStructureTrace, DequeTrace, DepthFirstSearchTrace, DoublyLinkedListTrace, DynamicProgrammingTrace, GraphAlgorithmTrace, GraphTraversalTrace, GraphEdge, KnapsackItem, LinkedListTrace, PathfindingTrace, ProblemDetail, SearchTrace, StructureOperation, StructureTrace, TreeOperation, TreeTrace } from './types'
 
 export class TraceRequestError extends Error {
   readonly kind: 'validation' | 'unavailable'
@@ -133,4 +133,8 @@ async function readProblem(response: Response): Promise<ProblemDetail | undefine
   } catch {
     return undefined
   }
+}
+
+export async function createDequeTrace(operations: Array<{ kind: 'ADD_FIRST' | 'ADD_LAST'; value: string } | { kind: 'PEEK_FIRST' | 'PEEK_LAST' }>, signal?: AbortSignal): Promise<DequeTrace> {
+  return requestTrace('/api/v2/algorithms/deque/trace', { kind: 'DATA_STRUCTURES', operations }, signal) as Promise<DequeTrace>
 }

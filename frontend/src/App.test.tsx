@@ -13,6 +13,33 @@ const trace={apiVersion:'2.0',algorithm:{id:'insertion',name:'Insertion Sort',fa
 beforeEach(()=>{history.replaceState(null,'','/');vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms')?catalog:trace),{status:200,headers:{'Content-Type':'application/json'}})))})
 afterEach(()=>vi.unstubAllGlobals())
 describe('App algorithm workbench',()=>{
+ it('retains a separate deque draft and replays endpoint reads accessibly', async () => {
+  const entry = { id: 'deque', name: 'Deque', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['ADD_FIRST', 'ADD_LAST', 'PEEK_FIRST', 'PEEK_LAST'] } }
+  const stack = { id: 'stack', name: 'Stack', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PUSH', 'POP', 'PEEK'] } }
+  const node = { occurrenceId: 1, value: 'A', prevOccurrenceId: null, nextOccurrenceId: null }
+  const state = { kind: 'DEQUE', nodes: [node], frontOccurrenceId: 1, rearOccurrenceId: 1, activeOperationIndex: 1, allocatedOccurrenceId: null, linkedOccurrenceId: 1 }
+  const trace = { apiVersion: '2.0', algorithm: { id: 'deque', name: 'Deque', family: 'DATA_STRUCTURES' }, input: { kind: 'DATA_STRUCTURES', operations: [{ kind: 'ADD_FIRST', value: 'A' }, { kind: 'PEEK_LAST' }] }, result: { kind: 'DEQUE', nodes: [node], frontOccurrenceId: 1, rearOccurrenceId: 1, size: 1, outcomes: ['A', 'Rear: A (node 1)'] }, limits: { maximumEvents: 10000 }, events: [
+    { sequence: 1, type: 'ENDPOINT_PEEKED', pseudocodeLineId: 'deque-peek-last', state, data: { kind: 'ENDPOINT_PEEKED', value: 'A', occurrenceId: 1, relatedOccurrenceId: null } },
+    { sequence: 2, type: 'ENDPOINT_PEEKED', pseudocodeLineId: 'deque-peek-last', state, data: { kind: 'ENDPOINT_PEEKED', value: 'A', occurrenceId: 1, relatedOccurrenceId: null } },
+  ] }
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => (void init, new Response(JSON.stringify(String(input).endsWith('/api/v2/algorithms') ? [...catalog, stack, entry] : trace), { headers: { 'Content-Type': 'application/json' } })))
+  vi.stubGlobal('fetch', fetchMock)
+  const user = userEvent.setup()
+  render(<App />)
+  await user.selectOptions(await screen.findByLabelText('Algorithm'), 'deque')
+  await user.clear(screen.getByLabelText('Text commands'))
+  await user.type(screen.getByLabelText('Text commands'), 'addFirst("A")\npeekLast()')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'stack')
+  await user.selectOptions(screen.getByLabelText('Algorithm'), 'deque')
+  expect(screen.getByLabelText('Text commands')).toHaveValue('addFirst("A")\npeekLast()')
+  await user.click(screen.getByRole('button', { name: 'Visualize Deque' }))
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ kind: 'DATA_STRUCTURES', operations: [{ kind: 'ADD_FIRST', value: 'A' }, { kind: 'PEEK_LAST' }] })
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getAllByRole('status').some(status => status.textContent?.includes('Read rear: A, node 1.'))).toBe(true)
+  expect(screen.getByRole('img', { name: /Deque: front node 1; rear node 1; A, node 1, prev null, next null/ })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next step' }))
+  expect(screen.getAllByRole('status').some(status => status.textContent?.includes('Rear: A (node 1)'))).toBe(true)
+ })
  it('authors and replays doubly linked list endpoint removal in both directions', async () => {
   const entry = { id: 'doubly-linked-list', name: 'Doubly Linked List', family: 'DATA_STRUCTURES', contractVersion: '2.0', constraints: { kind: 'DATA_STRUCTURES', minimumOperations: 1, maximumOperations: 50, minimumValueLength: 1, maximumValueLength: 40, operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'REMOVE_LAST'] } }
   const node = { occurrenceId: 1, value: 'A', nextOccurrenceId: null, prevOccurrenceId: null }

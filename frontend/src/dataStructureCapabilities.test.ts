@@ -3,7 +3,7 @@ import { dataStructureCapabilities, getDataStructureCapability } from './dataStr
 
 describe('data structure capabilities', () => {
   it('describes Stack, Queue, Linked List, and Doubly Linked List authoring without structure-specific branches', () => {
-    expect(dataStructureCapabilities.map(capability => capability.id)).toEqual(['stack', 'queue', 'linked-list', 'doubly-linked-list'])
+    expect(dataStructureCapabilities.map(capability => capability.id)).toEqual(['stack', 'queue', 'linked-list', 'doubly-linked-list', 'deque'])
     expect(getDataStructureCapability('stack')).toMatchObject({
       valueOperations: ['PUSH'],
       operations: ['PUSH', 'POP', 'PEEK'],

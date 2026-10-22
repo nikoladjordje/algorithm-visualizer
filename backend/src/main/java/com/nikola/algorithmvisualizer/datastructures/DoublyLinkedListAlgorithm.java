@@ -32,6 +32,17 @@ public class DoublyLinkedListAlgorithm {
         int sequence = 1;
         for (int index = 0; index < operations.size(); index++) {
             var operation = operations.get(index);
+            if ("PEEK_FIRST".equals(operation.kind()) || "PEEK_LAST".equals(operation.kind())) {
+                boolean first = "PEEK_FIRST".equals(operation.kind());
+                Long endpoint = first ? head : tail;
+                var node = endpoint == null ? null : find(nodes, endpoint);
+                String type = node == null ? "EMPTY_PEEK" : "ENDPOINT_PEEKED";
+                events.add(event(sequence++, type, first ? "deque-peek-first" : "deque-peek-last", nodes, head, tail,
+                        index, null, endpoint, endpoint, node == null ? null : node.value(), null));
+                outcomes.add(node == null ? "Nothing to read: the deque is empty"
+                        : (first ? "Front: " : "Rear: ") + node.value() + " (node " + endpoint + ")");
+                continue;
+            }
             if ("REMOVE_FIRST".equals(operation.kind()) || "REMOVE_LAST".equals(operation.kind())) {
                 boolean first = "REMOVE_FIRST".equals(operation.kind());
                 Long removedId = first ? head : tail;
@@ -75,7 +86,7 @@ public class DoublyLinkedListAlgorithm {
                 tail = nodeId;
                 events.add(event(sequence++, "ENDPOINTS_ESTABLISHED", "doubly-linked-list-establish-endpoints", nodes,
                         head, tail, index, nodeId, nodeId, nodeId, operation.value(), null));
-            } else if ("PREPEND".equals(operation.kind())) {
+            } else if ("PREPEND".equals(operation.kind()) || "ADD_FIRST".equals(operation.kind())) {
                 replace(nodes, nodeId, new Node(nodeId, operation.value(), head, null));
                 events.add(event(sequence++, "NEXT_ASSIGNED", "doubly-linked-list-link-new-head", nodes, head, tail,
                         index, nodeId, nodeId, nodeId, operation.value(), head));

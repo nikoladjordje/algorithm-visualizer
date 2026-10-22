@@ -1,5 +1,7 @@
 import type { StructureOperation } from './types'
-import { createDoublyLinkedListTrace, createLinkedListTrace, createQueueTrace, createStackTrace } from './api'
+import { createDequeTrace, createDoublyLinkedListTrace, createLinkedListTrace, createQueueTrace, createStackTrace } from './api'
+import { DequeVisualizer } from './components/DequeVisualizer'
+import { dequeAdapter } from './dequeAdapter'
 import { DoublyLinkedListVisualizer } from './components/DoublyLinkedListVisualizer'
 import { LinkedListVisualizer } from './components/LinkedListVisualizer'
 import { QueueVisualizer } from './components/QueueVisualizer'
@@ -10,19 +12,19 @@ import { linkedListAdapter } from './linkedListAdapter'
 import { doublyLinkedListAdapter } from './doublyLinkedListAdapter'
 import type { StructureTrace } from './types'
 
-export type DataStructureId = 'stack' | 'queue' | 'linked-list' | 'doubly-linked-list'
+export type DataStructureId = 'stack' | 'queue' | 'linked-list' | 'doubly-linked-list' | 'deque'
 export type DataStructureOperation = StructureOperation['kind']
-const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend', APPEND: 'append', REMOVE_FIRST: 'removeFirst', REMOVE_LAST: 'removeLast', FIND: 'find' }
+const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend', APPEND: 'append', REMOVE_FIRST: 'removeFirst', REMOVE_LAST: 'removeLast', FIND: 'find', ADD_FIRST: 'addFirst', ADD_LAST: 'addLast', PEEK_FIRST: 'peekFirst', PEEK_LAST: 'peekLast' }
 
 export interface DataStructureCapability {
   id: DataStructureId
-  title: 'Stack' | 'Queue' | 'Linked List' | 'Doubly Linked List'
+  title: 'Stack' | 'Queue' | 'Linked List' | 'Doubly Linked List' | 'Deque'
   operations: DataStructureOperation[]
   valueOperations: DataStructureOperation[]
   commandNames: Record<DataStructureOperation, string>
   createTrace: (operations: StructureOperation[], signal?: AbortSignal) => Promise<StructureTrace>
-  Visualizer: typeof StackVisualizer | typeof QueueVisualizer | typeof LinkedListVisualizer | typeof DoublyLinkedListVisualizer
-  learningAdapter: typeof stackAdapter | typeof queueAdapter | typeof linkedListAdapter | typeof doublyLinkedListAdapter
+  Visualizer: typeof StackVisualizer | typeof QueueVisualizer | typeof LinkedListVisualizer | typeof DoublyLinkedListVisualizer | typeof DequeVisualizer
+  learningAdapter: typeof stackAdapter | typeof queueAdapter | typeof linkedListAdapter | typeof doublyLinkedListAdapter | typeof dequeAdapter
 }
 
 export const dataStructureCapabilities: DataStructureCapability[] = [
@@ -65,6 +67,16 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
     createTrace: (operations, signal) => createDoublyLinkedListTrace(operations as Array<{ kind: 'PREPEND' | 'APPEND'; value: string } | { kind: 'REMOVE_FIRST' | 'REMOVE_LAST' }>, signal),
     Visualizer: DoublyLinkedListVisualizer,
     learningAdapter: doublyLinkedListAdapter,
+  },
+  {
+    id: 'deque',
+    title: 'Deque',
+    operations: ['ADD_FIRST', 'ADD_LAST', 'PEEK_FIRST', 'PEEK_LAST'],
+    valueOperations: ['ADD_FIRST', 'ADD_LAST'],
+    commandNames,
+    createTrace: (operations, signal) => createDequeTrace(operations as Array<{ kind: 'ADD_FIRST' | 'ADD_LAST'; value: string } | { kind: 'PEEK_FIRST' | 'PEEK_LAST' }>, signal),
+    Visualizer: DequeVisualizer,
+    learningAdapter: dequeAdapter,
   },
 ]
 

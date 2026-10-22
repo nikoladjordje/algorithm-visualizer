@@ -18,6 +18,7 @@ import com.nikola.algorithmvisualizer.datastructures.StackAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.QueueAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.LinkedListAlgorithm;
 import com.nikola.algorithmvisualizer.datastructures.DoublyLinkedListAlgorithm;
+import com.nikola.algorithmvisualizer.datastructures.DequeAlgorithm;
 import com.nikola.algorithmvisualizer.graph.BreadthFirstSearchAlgorithm;
 import com.nikola.algorithmvisualizer.graph.DijkstraPathfindingAlgorithm;
 import com.nikola.algorithmvisualizer.graph.IterativeDepthFirstSearchAlgorithm;
@@ -65,13 +66,14 @@ public class V2AlgorithmController {
     private final QueueAlgorithm queue;
     private final LinkedListAlgorithm linkedList;
     private final DoublyLinkedListAlgorithm doublyLinkedList;
+    private final DequeAlgorithm deque;
 
     public V2AlgorithmController(AlgorithmRegistry registry, BreadthFirstSearchAlgorithm breadthFirstSearch,
             IterativeDepthFirstSearchAlgorithm depthFirstSearch,
             DijkstraPathfindingAlgorithm dijkstraPathfinding, LinearSearchAlgorithm linearSearch,
             BinarySearchAlgorithm binarySearch, BinarySearchTreeAlgorithm binarySearchTree, KnapsackAlgorithm knapsack,
             StackAlgorithm stack, QueueAlgorithm queue, LinkedListAlgorithm linkedList,
-            DoublyLinkedListAlgorithm doublyLinkedList) {
+            DoublyLinkedListAlgorithm doublyLinkedList, DequeAlgorithm deque) {
         this.registry = registry;
         this.breadthFirstSearch = breadthFirstSearch;
         this.depthFirstSearch = depthFirstSearch;
@@ -84,6 +86,7 @@ public class V2AlgorithmController {
         this.queue = queue;
         this.linkedList = linkedList;
         this.doublyLinkedList = doublyLinkedList;
+        this.deque = deque;
     }
 
     @GetMapping
@@ -122,6 +125,9 @@ public class V2AlgorithmController {
         catalog.add(new V2Contracts.CatalogEntry("doubly-linked-list", "Doubly Linked List", DATA_STRUCTURES, "2.0",
                 new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
                         List.of("PREPEND", "APPEND", "REMOVE_FIRST", "REMOVE_LAST"))));
+        catalog.add(new V2Contracts.CatalogEntry("deque", "Deque", DATA_STRUCTURES, "2.0",
+                new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
+                        List.of("ADD_FIRST", "ADD_LAST", "PEEK_FIRST", "PEEK_LAST"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
                 new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
@@ -191,6 +197,16 @@ public class V2AlgorithmController {
                     new V2Contracts.AlgorithmInfo("queue", "Queue", DATA_STRUCTURES),
                     new V2Contracts.DataStructureInput(DATA_STRUCTURES, request.operations()), queueTrace.result(),
                     new V2Contracts.Limits(MAXIMUM_EVENTS), queueTrace.events());
+        }
+        if ("deque".equals(algorithmId)) {
+            if (!DATA_STRUCTURES.equals(request.kind())) throw new AlgorithmFamilyMismatchException(algorithmId, DATA_STRUCTURES);
+            validateDeque(request);
+            var operations = request.operations().stream().map(operation -> new DequeAlgorithm.Operation(operation.kind(), operation.value())).toList();
+            var trace = deque.execute(operations);
+            if (trace.events().size() > MAXIMUM_EVENTS) throw new TraceLimitExceededException(MAXIMUM_EVENTS);
+            return new V2Contracts.DataStructureTrace("2.0", new V2Contracts.AlgorithmInfo("deque", "Deque", DATA_STRUCTURES),
+                    new V2Contracts.DataStructureInput(DATA_STRUCTURES, request.operations()), trace.result(),
+                    new V2Contracts.Limits(MAXIMUM_EVENTS), trace.events());
         }
         if ("doubly-linked-list".equals(algorithmId)) {
             if (!DATA_STRUCTURES.equals(request.kind())) throw new AlgorithmFamilyMismatchException(algorithmId, DATA_STRUCTURES);
@@ -453,6 +469,24 @@ public class V2AlgorithmController {
                     && (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40)) {
                 throw new GraphValidationException(field + ".value", "linked list values must contain 1 through 40 characters");
             }
+        }
+    }
+
+    private static void validateDeque(V2Request request) {
+        if (request.operations() == null || request.operations().isEmpty() || request.operations().size() > 50) {
+            throw new GraphValidationException("operations", "Provide from 1 through 50 deque operations");
+        }
+        for (int index = 0; index < request.operations().size(); index++) {
+            var operation = request.operations().get(index);
+            String field = "operations[" + index + "]";
+            if (operation == null || operation.kind() == null || !List.of("ADD_FIRST", "ADD_LAST", "PEEK_FIRST", "PEEK_LAST").contains(operation.kind())) {
+                throw new GraphValidationException(field + ".kind", "Use ADD_FIRST, ADD_LAST, PEEK_FIRST, or PEEK_LAST");
+            }
+            boolean add = "ADD_FIRST".equals(operation.kind()) || "ADD_LAST".equals(operation.kind());
+            if (add && (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40)) {
+                throw new GraphValidationException(field + ".value", "deque values must contain 1 through 40 characters");
+            }
+            if (!add && operation.value() != null) throw new GraphValidationException(field + ".value", "Peek does not accept a value");
         }
     }
 
