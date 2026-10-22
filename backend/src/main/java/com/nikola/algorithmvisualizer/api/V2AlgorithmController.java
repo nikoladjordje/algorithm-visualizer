@@ -121,7 +121,7 @@ public class V2AlgorithmController {
                         List.of("PREPEND", "APPEND", "REMOVE_FIRST", "FIND"))));
         catalog.add(new V2Contracts.CatalogEntry("doubly-linked-list", "Doubly Linked List", DATA_STRUCTURES, "2.0",
                 new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
-                        List.of("PREPEND", "APPEND"))));
+                        List.of("PREPEND", "APPEND", "REMOVE_FIRST", "REMOVE_LAST"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
                 new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
@@ -463,10 +463,15 @@ public class V2AlgorithmController {
         for (int index = 0; index < request.operations().size(); index++) {
             var operation = request.operations().get(index);
             String field = "operations[" + index + "]";
-            if (operation == null || (!"PREPEND".equals(operation.kind()) && !"APPEND".equals(operation.kind()))) {
-                throw new GraphValidationException(field + ".kind", "Use PREPEND or APPEND");
+            if (operation == null || (!"PREPEND".equals(operation.kind()) && !"APPEND".equals(operation.kind())
+                    && !"REMOVE_FIRST".equals(operation.kind()) && !"REMOVE_LAST".equals(operation.kind()))) {
+                throw new GraphValidationException(field + ".kind", "Use PREPEND, APPEND, REMOVE_FIRST, or REMOVE_LAST");
             }
-            if (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40) {
+            boolean removal = "REMOVE_FIRST".equals(operation.kind()) || "REMOVE_LAST".equals(operation.kind());
+            if (removal && operation.value() != null) {
+                throw new GraphValidationException(field + ".value", "Removal does not accept a value");
+            }
+            if (!removal && (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40)) {
                 throw new GraphValidationException(field + ".value", "doubly linked list values must contain 1 through 40 characters");
             }
         }

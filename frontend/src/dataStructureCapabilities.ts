@@ -12,7 +12,7 @@ import type { StructureTrace } from './types'
 
 export type DataStructureId = 'stack' | 'queue' | 'linked-list' | 'doubly-linked-list'
 export type DataStructureOperation = StructureOperation['kind']
-const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend', APPEND: 'append', REMOVE_FIRST: 'removeFirst', FIND: 'find' }
+const commandNames: Record<DataStructureOperation, string> = { PUSH: 'push', POP: 'pop', ENQUEUE: 'enqueue', DEQUEUE: 'dequeue', PEEK: 'peek', PREPEND: 'prepend', APPEND: 'append', REMOVE_FIRST: 'removeFirst', REMOVE_LAST: 'removeLast', FIND: 'find' }
 
 export interface DataStructureCapability {
   id: DataStructureId
@@ -59,10 +59,10 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
   {
     id: 'doubly-linked-list',
     title: 'Doubly Linked List',
-    operations: ['PREPEND', 'APPEND'],
+    operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'REMOVE_LAST'],
     valueOperations: ['PREPEND', 'APPEND'],
     commandNames,
-    createTrace: (operations, signal) => createDoublyLinkedListTrace(operations as Array<{ kind: 'PREPEND' | 'APPEND'; value: string }>, signal),
+    createTrace: (operations, signal) => createDoublyLinkedListTrace(operations as Array<{ kind: 'PREPEND' | 'APPEND'; value: string } | { kind: 'REMOVE_FIRST' | 'REMOVE_LAST' }>, signal),
     Visualizer: DoublyLinkedListVisualizer,
     learningAdapter: doublyLinkedListAdapter,
   },

@@ -21,8 +21,8 @@ describe('data structure capabilities', () => {
     })
     expect(getDataStructureCapability('doubly-linked-list')).toMatchObject({
       valueOperations: ['PREPEND', 'APPEND'],
-      operations: ['PREPEND', 'APPEND'],
-      commandNames: { PREPEND: 'prepend', APPEND: 'append' },
+      operations: ['PREPEND', 'APPEND', 'REMOVE_FIRST', 'REMOVE_LAST'],
+      commandNames: { PREPEND: 'prepend', APPEND: 'append', REMOVE_FIRST: 'removeFirst', REMOVE_LAST: 'removeLast' },
     })
   })
 })

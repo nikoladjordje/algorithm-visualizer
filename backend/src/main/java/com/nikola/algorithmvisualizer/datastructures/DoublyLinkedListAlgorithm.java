@@ -32,6 +32,40 @@ public class DoublyLinkedListAlgorithm {
         int sequence = 1;
         for (int index = 0; index < operations.size(); index++) {
             var operation = operations.get(index);
+            if ("REMOVE_FIRST".equals(operation.kind()) || "REMOVE_LAST".equals(operation.kind())) {
+                boolean first = "REMOVE_FIRST".equals(operation.kind());
+                Long removedId = first ? head : tail;
+                if (removedId == null) {
+                    events.add(event(sequence++, "EMPTY_REMOVAL", "doubly-linked-list-empty-removal", nodes, head, tail,
+                            index, null, null, null, null, null));
+                    outcomes.add("Nothing to remove: the list is empty");
+                    continue;
+                }
+                var removed = find(nodes, removedId);
+                Long neighbor = first ? removed.nextOccurrenceId() : removed.prevOccurrenceId();
+                events.add(event(sequence++, "ENDPOINT_SELECTED", "doubly-linked-list-select-endpoint", nodes, head, tail,
+                        index, null, removedId, removedId, removed.value(), neighbor));
+                if (first) head = neighbor; else tail = neighbor;
+                if (neighbor == null) { head = null; tail = null; }
+                events.add(event(sequence++, first ? "HEAD_MOVED" : "TAIL_MOVED", "doubly-linked-list-remove-move-endpoint", nodes,
+                        head, tail, index, null, removedId, removedId, removed.value(), neighbor));
+                if (neighbor != null) {
+                    var adjacent = find(nodes, neighbor);
+                    replace(nodes, neighbor, first
+                            ? new Node(neighbor, adjacent.value(), adjacent.nextOccurrenceId(), null)
+                            : new Node(neighbor, adjacent.value(), null, adjacent.prevOccurrenceId()));
+                    events.add(event(sequence++, first ? "PREV_CLEARED" : "NEXT_CLEARED", "doubly-linked-list-clear-neighbor", nodes,
+                            head, tail, index, null, neighbor, neighbor, adjacent.value(), removedId));
+                }
+                replace(nodes, removedId, new Node(removedId, removed.value(), null, null));
+                events.add(event(sequence++, "NODE_DETACHED", "doubly-linked-list-detach", nodes, head, tail,
+                        index, null, removedId, removedId, removed.value(), null));
+                nodes.remove(removedId);
+                events.add(event(sequence++, "REMOVAL_COMPLETED", "doubly-linked-list-removal-complete", nodes, head, tail,
+                        index, null, null, removedId, removed.value(), null));
+                outcomes.add("Removed " + removed.value() + " from node " + removedId);
+                continue;
+            }
             long nodeId = nextId++;
             nodes.put(nodeId, new Node(nodeId, operation.value(), null, null));
             events.add(event(sequence++, "NODE_ALLOCATED", "doubly-linked-list-allocate", nodes, head, tail, index,

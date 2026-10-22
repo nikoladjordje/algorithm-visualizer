@@ -41,6 +41,21 @@ class AlgorithmControllerTests {
     }
 
     @Test
+    void acceptsDoublyLinkedListEndpointRemovalsAndRejectsTheirValues() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/doubly-linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DATA_STRUCTURES\",\"operations\":[{\"kind\":\"REMOVE_FIRST\"},{\"kind\":\"APPEND\",\"value\":\"A\"},{\"kind\":\"REMOVE_LAST\"}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events[0].type").value("EMPTY_REMOVAL"))
+                .andExpect(jsonPath("$.result.size").value(0))
+                .andExpect(jsonPath("$.result.outcomes[2]").value("Removed A from node 1"));
+        mockMvc.perform(post("/api/v2/algorithms/doubly-linked-list/trace")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"DATA_STRUCTURES\",\"operations\":[{\"kind\":\"REMOVE_LAST\",\"value\":\"A\"}]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void advertisesAndRunsQueueOperationsThroughTheDataStructuresContract() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk())

@@ -70,6 +70,6 @@ describe('structure visualizers', () => {
   it('narrates head, tail, and reciprocal links without relying on color', () => {
     render(<DoublyLinkedListVisualizer state={{ kind: 'DOUBLY_LINKED_LIST', headOccurrenceId: 1, tailOccurrenceId: 2, activeOperationIndex: 1, allocatedOccurrenceId: null, linkedOccurrenceId: 2,
       nodes: [{ occurrenceId: 1, value: 'A', prevOccurrenceId: null, nextOccurrenceId: 2 }, { occurrenceId: 2, value: 'A', prevOccurrenceId: 1, nextOccurrenceId: null }] }} />)
-    expect(screen.getByLabelText('Doubly linked list: head node 1; tail node 2; A, node 1, prev null, next node 2; A, node 2, prev node 1, next null. Active operation 2. Linking node 2.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Doubly linked list: head node 1; tail node 2; A, node 1, prev null, next node 2; A, node 2, prev node 1, next null. Active operation 2. Active node 2.')).toBeInTheDocument()
   })
 })

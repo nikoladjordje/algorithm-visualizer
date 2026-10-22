@@ -31,6 +31,13 @@ describe('structure commands', () => {
     })
   })
 
+  it('round trips doubly linked list endpoint removals', () => {
+    const capability = getDataStructureCapability('doubly-linked-list')
+    const operations = [{ kind: 'REMOVE_FIRST' as const }, { kind: 'REMOVE_LAST' as const }]
+    expect(parseStructureCommands('removeFirst()\nremoveLast()', capability)).toEqual({ operations })
+    expect(serializeStructureCommands(operations, capability)).toBe('removeFirst()\nremoveLast()')
+  })
+
   it('parses a linked-list find with JSON-style label escaping', () => {
     expect(parseStructureCommands('find("A\\"B")', getDataStructureCapability('linked-list'))).toEqual({
       operations: [{ kind: 'FIND', value: 'A"B' }],
