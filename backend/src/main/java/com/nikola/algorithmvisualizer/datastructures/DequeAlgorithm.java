@@ -24,6 +24,9 @@ public class DequeAlgorithm {
         var result = trace.result();
         var outcomes = new java.util.ArrayList<>(result.outcomes());
         for (var event : trace.events()) {
+            if ("EMPTY_REMOVAL".equals(event.type())) {
+                outcomes.set(event.state().activeOperationIndex(), "Nothing to remove: the deque is empty");
+            }
             if ("NODE_ALLOCATED".equals(event.type())) {
                 int index = event.state().activeOperationIndex();
                 var operation = operations.get(index);

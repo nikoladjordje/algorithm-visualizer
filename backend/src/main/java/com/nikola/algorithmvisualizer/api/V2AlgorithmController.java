@@ -127,7 +127,7 @@ public class V2AlgorithmController {
                         List.of("PREPEND", "APPEND", "REMOVE_FIRST", "REMOVE_LAST"))));
         catalog.add(new V2Contracts.CatalogEntry("deque", "Deque", DATA_STRUCTURES, "2.0",
                 new V2Contracts.DataStructureConstraints(DATA_STRUCTURES, 1, 50, 1, 40,
-                        List.of("ADD_FIRST", "ADD_LAST", "PEEK_FIRST", "PEEK_LAST"))));
+                        List.of("ADD_FIRST", "ADD_LAST", "REMOVE_FIRST", "REMOVE_LAST", "PEEK_FIRST", "PEEK_LAST"))));
         catalog.add(new V2Contracts.CatalogEntry("zero-one-knapsack", "0/1 Knapsack", DYNAMIC_PROGRAMMING, "2.0",
                 new V2Contracts.DynamicProgrammingConstraints(DYNAMIC_PROGRAMMING, 1, 10, 0, 20, 1, 0)));
         return List.copyOf(catalog);
@@ -479,14 +479,14 @@ public class V2AlgorithmController {
         for (int index = 0; index < request.operations().size(); index++) {
             var operation = request.operations().get(index);
             String field = "operations[" + index + "]";
-            if (operation == null || operation.kind() == null || !List.of("ADD_FIRST", "ADD_LAST", "PEEK_FIRST", "PEEK_LAST").contains(operation.kind())) {
-                throw new GraphValidationException(field + ".kind", "Use ADD_FIRST, ADD_LAST, PEEK_FIRST, or PEEK_LAST");
+            if (operation == null || operation.kind() == null || !List.of("ADD_FIRST", "ADD_LAST", "REMOVE_FIRST", "REMOVE_LAST", "PEEK_FIRST", "PEEK_LAST").contains(operation.kind())) {
+                throw new GraphValidationException(field + ".kind", "Use ADD_FIRST, ADD_LAST, REMOVE_FIRST, REMOVE_LAST, PEEK_FIRST, or PEEK_LAST");
             }
             boolean add = "ADD_FIRST".equals(operation.kind()) || "ADD_LAST".equals(operation.kind());
             if (add && (operation.value() == null || operation.value().isBlank() || operation.value().length() > 40)) {
                 throw new GraphValidationException(field + ".value", "deque values must contain 1 through 40 characters");
             }
-            if (!add && operation.value() != null) throw new GraphValidationException(field + ".value", "Peek does not accept a value");
+            if (!add && operation.value() != null) throw new GraphValidationException(field + ".value", "This operation does not accept a value");
         }
     }
 

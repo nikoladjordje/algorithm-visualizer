@@ -59,7 +59,7 @@ class AlgorithmControllerTests {
     void exposesDequeOperationsAndRejectsInvalidPeekValues() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v2/algorithms"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[16].id").value("deque"))
-                .andExpect(jsonPath("$[16].constraints.operations[2]").value("PEEK_FIRST"));
+                .andExpect(jsonPath("$[16].constraints.operations[2]").value("REMOVE_FIRST"));
         mockMvc.perform(post("/api/v2/algorithms/deque/trace").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"kind\":\"DATA_STRUCTURES\",\"operations\":[{\"kind\":\"PEEK_FIRST\"},{\"kind\":\"ADD_LAST\",\"value\":\"A\"},{\"kind\":\"PEEK_LAST\"}]}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.events[0].type").value("EMPTY_PEEK"))
@@ -69,6 +69,18 @@ class AlgorithmControllerTests {
                 .andExpect(jsonPath("$.result.outcomes[2]").value("Rear: A (node 1)"));
         mockMvc.perform(post("/api/v2/algorithms/deque/trace").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"kind\":\"DATA_STRUCTURES\",\"operations\":[{\"kind\":\"PEEK_LAST\",\"value\":\"A\"}]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void acceptsDequeRemovalsAndRejectsRemovalValues() throws Exception {
+        mockMvc.perform(post("/api/v2/algorithms/deque/trace").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"kind\":\"DATA_STRUCTURES\",\"operations\":[{\"kind\":\"REMOVE_FIRST\"},{\"kind\":\"ADD_LAST\",\"value\":\"A\"},{\"kind\":\"REMOVE_LAST\"}]}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.events[0].type").value("EMPTY_REMOVAL"))
+                .andExpect(jsonPath("$.result.size").value(0))
+                .andExpect(jsonPath("$.result.outcomes[0]").value("Nothing to remove: the deque is empty"));
+        mockMvc.perform(post("/api/v2/algorithms/deque/trace").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"kind\":\"DATA_STRUCTURES\",\"operations\":[{\"kind\":\"REMOVE_FIRST\",\"value\":\"A\"}]}"))
                 .andExpect(status().isBadRequest());
     }
 

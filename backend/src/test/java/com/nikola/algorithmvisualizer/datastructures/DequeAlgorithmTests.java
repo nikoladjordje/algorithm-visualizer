@@ -49,4 +49,19 @@ class DequeAlgorithmTests {
         assertEquals(4, last.nodes().size());
         assertEquals(List.of(3L, 2L, 1L, 4L), trace.result().nodes().stream().map(DoublyLinkedListAlgorithm.Node::occurrenceId).toList());
     }
+    @Test
+    void removesBothEndsAndContinuesAfterEmptyRemoval() {
+        var trace = new DequeAlgorithm().execute(List.of(
+                new DequeAlgorithm.Operation("REMOVE_FIRST", null),
+                new DequeAlgorithm.Operation("ADD_FIRST", "A"),
+                new DequeAlgorithm.Operation("ADD_LAST", "A"),
+                new DequeAlgorithm.Operation("REMOVE_LAST", null),
+                new DequeAlgorithm.Operation("REMOVE_FIRST", null)));
+        assertEquals("Nothing to remove: the deque is empty", trace.result().outcomes().getFirst());
+        assertEquals(List.of("ENDPOINT_SELECTED", "TAIL_MOVED", "NEXT_CLEARED", "NODE_DETACHED", "REMOVAL_COMPLETED"),
+                trace.events().stream().filter(e -> e.state().activeOperationIndex() == 3).map(DequeAlgorithm.Event::type).toList());
+        assertEquals(0, trace.result().size());
+        assertEquals(null, trace.result().frontOccurrenceId());
+        assertEquals(null, trace.result().rearOccurrenceId());
+    }
 }

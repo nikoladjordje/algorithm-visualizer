@@ -3,6 +3,13 @@ import { getDataStructureCapability } from './dataStructureCapabilities'
 import { parseStructureCommands, serializeStructureCommands } from './structureCommands'
 
 describe('structure commands', () => {
+  it('accepts and serializes deque removals', () => {
+    const capability = getDataStructureCapability('deque')
+    const operations = [{ kind: 'REMOVE_FIRST' as const }, { kind: 'REMOVE_LAST' as const }]
+    expect(parseStructureCommands('removeFirst()\nremoveLast()', capability)).toEqual({ operations })
+    expect(serializeStructureCommands(operations, capability)).toBe('removeFirst()\nremoveLast()')
+  })
+
   it('parses Stack commands and standard escaped labels', () => {
     expect(parseStructureCommands('push("A\\nB")\npeek()\npop()', getDataStructureCapability('stack'))).toEqual({
       operations: [{ kind: 'PUSH', value: 'A\nB' }, { kind: 'PEEK' }, { kind: 'POP' }],

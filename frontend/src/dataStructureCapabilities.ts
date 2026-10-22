@@ -71,10 +71,10 @@ export const dataStructureCapabilities: DataStructureCapability[] = [
   {
     id: 'deque',
     title: 'Deque',
-    operations: ['ADD_FIRST', 'ADD_LAST', 'PEEK_FIRST', 'PEEK_LAST'],
+    operations: ['ADD_FIRST', 'ADD_LAST', 'REMOVE_FIRST', 'REMOVE_LAST', 'PEEK_FIRST', 'PEEK_LAST'],
     valueOperations: ['ADD_FIRST', 'ADD_LAST'],
     commandNames,
-    createTrace: (operations, signal) => createDequeTrace(operations as Array<{ kind: 'ADD_FIRST' | 'ADD_LAST'; value: string } | { kind: 'PEEK_FIRST' | 'PEEK_LAST' }>, signal),
+    createTrace: (operations, signal) => createDequeTrace(operations as Array<{ kind: 'ADD_FIRST' | 'ADD_LAST'; value: string } | { kind: 'REMOVE_FIRST' | 'REMOVE_LAST' | 'PEEK_FIRST' | 'PEEK_LAST' }>, signal),
     Visualizer: DequeVisualizer,
     learningAdapter: dequeAdapter,
   },

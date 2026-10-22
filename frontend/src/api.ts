@@ -135,6 +135,6 @@ async function readProblem(response: Response): Promise<ProblemDetail | undefine
   }
 }
 
-export async function createDequeTrace(operations: Array<{ kind: 'ADD_FIRST' | 'ADD_LAST'; value: string } | { kind: 'PEEK_FIRST' | 'PEEK_LAST' }>, signal?: AbortSignal): Promise<DequeTrace> {
+export async function createDequeTrace(operations: Array<{ kind: 'ADD_FIRST' | 'ADD_LAST'; value: string } | { kind: 'REMOVE_FIRST' | 'REMOVE_LAST' | 'PEEK_FIRST' | 'PEEK_LAST' }>, signal?: AbortSignal): Promise<DequeTrace> {
   return requestTrace('/api/v2/algorithms/deque/trace', { kind: 'DATA_STRUCTURES', operations }, signal) as Promise<DequeTrace>
 }
